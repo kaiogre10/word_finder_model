@@ -1,0 +1,125 @@
+## **Resumen detallado del modelo Word Finder**
+
+### **1. Arquitectura General**
+
+**Tipo de modelo:** Sistema de búsqueda vectorizada con n-gramas pre-entrenados
+**Objetivo:** Encontrar campos específicos (RFC, IVA, Total, etc.) en texto de polígonos OCR
+**Enfoque:** Modelo pickle pre-entrenado + búsqueda por similitud coseno
+
+### **2. Estructura del Sistema**
+
+```
+word_finder_model/
+├── data/
+│   ├── palabras_clave.yaml          # Base de datos de campos y variantes
+│   └── word_finder_model.pkl        # Modelo TF-IDF vectorizado
+├── scripts/
+│   └── generate_model.py            # Generador del modelo (ejecutar cuando cambies palabras)
+├── src/
+│   └── word_finder.py               # Clase para búsqueda en producción
+└── documentación.txt                 # scikit-learn, pyyaml, numpy
+```
+
+### **3. Componentes del Modelo**
+
+**A. Base de datos de palabras (YAML):**
+- **Campos objetivo**: Total, IVA, RFC, Folio, Subtotal, Descuento, etc.
+- **Variantes por campo**: "Total", "TOTAL", "Total:", "Total a pagar", "Importe total"
+- **Configuración**: N-gramas (1-3), umbral de similitud (0.75)
+
+**B. Modelo vectorizado (Pickle):**
+- **Vectorizador TF-IDF**: Entrenado con todas las palabras clave
+- **N-gramas**: Unigramas, bigramas y trigramas de las palabras
+- **Espacio vectorial consistente**: Mismas dimensiones para todos los textos
+
+**C. Motor de búsqueda:**
+- **Entrada**: Texto del polígono individual
+- **Proceso**: Vectorización + similitud coseno vs modelo
+- **Salida**: Campos encontrados con score de confianza
+
+### **4. Flujo de Trabajo**
+
+**Fase de preparación (una sola vez o al cambiar palabras):**
+1. **Editar YAML** → Agregar/modificar campos y variantes
+2. **Ejecutar generador** → `python generate_model.py`
+3. **Modelo listo** → Pickle guardado con vectorizador entrenado
+
+**Fase de uso (en producción):**
+1. **Cargar modelo** → Una sola vez al inicializar worker
+2. **Por cada polígono** → Vectorizar texto + comparar similitud
+3. **Retornar resultados** → Campos encontrados con scores
+
+### **5. Tecnología Utilizada**
+
+**Vectorización:**
+- **TF-IDF**: Term Frequency - Inverse Document Frequency
+- **N-gramas**: Captura patrones de 1-3 palabras consecutivas
+- **Scikit-learn**: TfidfVectorizer + cosine_similarity
+
+**Persistencia:**
+- **Pickle**: Serialización del modelo entrenado
+- **YAML**: Configuración legible y editable
+
+### **6. Ventajas del Enfoque**
+
+**Eficiencia:**
+- **Velocidad**: Modelo pre-entrenado, solo vectorizar texto nuevo
+- **Memoria**: Carga una vez, reutiliza múltiples veces
+- **Escalabilidad**: Maneja miles de polígonos por segundo
+
+**Flexibilidad:**
+- **Datos variables**: Funciona con documentos que tienen campos opcionales
+- **Nuevos campos**: Solo editar YAML y regenerar modelo
+- **Variaciones OCR**: Tolerante a errores de reconocimiento
+
+**Robustez:**
+- **Sin falsos positivos**: Umbral de similitud configurable
+- **Contexto preservado**: Trabaja por polígono individual
+- **Mantenimiento simple**: Un archivo YAML centralizado
+
+### **7. Casos de Uso Específicos**
+
+**Documentos soportados:**
+- **Tickets**: Total, IVA, Folio
+- **Facturas**: RFC, Subtotal, Impuestos, Fecha
+- **Recibos**: Cliente, Vendedor, Dirección
+- **Cualquier documento**: Campos definidos en YAML
+
+**Variaciones manejadas:**
+- **Formato**: "Total:", "Total $", "Total a pagar"
+- **Mayúsculas**: "TOTAL", "total", "Total"
+- **Errores OCR**: "Tota1" → "Total" (por similitud)
+- **Idiomas**: Español, inglés (según YAML)
+
+### **8. Configuración Técnica**
+
+**Parámetros del modelo:**
+- **N-gram range**: (1, 3) - unigramas a trigramas
+- **Umbral similitud**: 0.75 - balance precisión/recall
+- **Encoding**: UTF-8 para caracteres especiales
+
+**Salida esperada:**
+```python
+[
+    {
+        'campo': 'total',
+        'palabra_encontrada': 'Total:',
+        'similitud': 0.95,
+        'texto_original': 'Total: $150.50'
+    }
+]
+```
+
+### **9. Integración con PerfectOCR**
+
+**En tu pipeline actual:**
+- **Entrada**: Polígonos con texto OCR ya extraído
+- **Proceso**: WordFinder.buscar_campos(texto_poligono)
+- **Salida**: Campos identificados para procesamiento posterior
+
+**Compatibilidad:**
+- **Sin modificar arquitectura**: Se integra como worker adicional
+- **Datos inmutables**: Cumple con tu principio de no copiar imágenes [[memory:5660332]]
+- **Configuración YAML**: Alineado con tu preferencia [[memory:4909058]]
+
+¿Te parece completa esta descripción del modelo? ¿Hay algún aspecto específico que quieras que profundice?

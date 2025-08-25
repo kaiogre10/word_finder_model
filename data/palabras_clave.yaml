@@ -1,0 +1,50 @@
+key_fields:
+  MontoTotalDocumento: 
+    - "total"
+    - "total" 
+    - "total:"
+    - "total a pagar"
+    - "importe total"
+    
+  total_productos:
+    - "total de articulos"
+    - "total de piezas" 
+    - "total de unidades"
+    - "total a pagar"
+    - "importe total"
+    - "usted debe"
+    
+  MontoIVAGeneral:
+    - "iva"
+    - "i.v.a."
+    - "iva"
+    - "iva:"
+    - "impuesto al valor agregado"
+    
+  RFCProveedor:
+    - "rfc"
+    - "r.f.c."
+    - "rfc"
+    - "rfc:"
+    - "registro federal de contribuyentes"
+  
+  FolioDocumento:
+    - "folio"
+    - "folio no."
+    - "numero de ticket"
+    - "ticket no."
+    - "no ticket"
+ 
+  FechaDocumento:
+    - "fecha"
+    - "hora"
+    
+  NombreCliente:
+    - "cliente"
+
+key_headers:
+  - ""
+
+config:
+  ngram_range: [1, 3]
+  umbral_similitud: 0.75
