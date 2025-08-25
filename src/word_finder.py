@@ -1,8 +1,12 @@
 import os
 import pickle
 import numpy as np
-from typing import List
+from typing import List, Any, Dict
 from sklearn.metrics.pairwise import cosine_similarity
+import logging
+logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 class WordFinder:
     def __init__(self, model_path=None):
@@ -11,71 +15,72 @@ class WordFinder:
         
         self.model = self._load_model(model_path)
         self.vectorizer = self.model['vectorizer']
-        self.umbral = self.model['config']['umbral_similitud']
+        self.threshold = self.model['params']['threshold_similarity']
         
     def _load_model(self, model_path):
         """Carga el modelo pre-entrenado"""
         try:
             with open(model_path, 'rb') as f:
                 model = pickle.load(f)
-            print(f"Modelo cargado: {model['total_palabras']} palabras, {model['vocabulario_size']} n-gramas")
+            logger.info(f"Modelo cargado: {model['total_words']} palabras, {model['vocabulario_size']} n-gramas")
             return model
         except FileNotFoundError:
             raise FileNotFoundError(f"Modelo no encontrado en {model_path}. Ejecuta generate_model.py primero.")
     
-    def seek_field(self, poligon_text):
+    def find_keywords(self, text: str):
         """
         Busca campos clave en el texto del polígono
-        
         Args:
             texto_poligono (str): Texto extraído del polígono
-            
         Returns:
             list: Lista de coincidencias encontradas
         """
-        if not poligon_text.strip():
+        if not text.strip():
             return []
         
         # Vectorizar texto del polígono
-        texto_vectorizado = self.vectorizer.transform([poligon_text])
+        vectorized_text = self.vectorizer.transform([text])
         
         # Vectorizar todas las palabras clave
-        all_words = []
-        mapping_field = {}
+        all_words: List[Any] = []
+        mapping_field: Dict[str, Any] = {}
         
-        for field, variantes in self.model['campos_clave'].items():
-            for variante in variantes:
-                all_words.append(variante)
-                mapping_field[variante] = field
+        for field, variants in self.model['key_fields'].items():
+            for variant in variants:
+                all_words.append(variant)
+                mapping_field[variant] = field
         
         vectorized_words = self.vectorizer.transform(all_words)
         
         # Calcular similitudes
-        similitudes = cosine_similarity(texto_vectorizado, vectorized_words)[0]
+        similities: np.ndarray[Any, Any] = cosine_similarity(vectorized_text, vectorized_words)[0]
         
         # Encontrar coincidencias
-        coincidences = []
-        for i, similitud in enumerate(similitudes):
-            if similitud > self.umbral:
+        coincidences: List[Any] = []
+        for i, simility in enumerate(similities):
+            if simility > self.threshold:
                 word = vectorized_words[i]
                 field = mapping_field[word]
                 coincidences.append({
                     'field': field,
                     'word_finded': word,
-                    'similitud': float(similitud),
-                    'original_text': poligon_text
+                    'simility': float(simility),
+                    'original_text': text
                 })
         
         # Ordenar por similitud descendente
-        coincidences.sort(key=lambda x: x['similitud'], reverse=True)
+        coincidences.sort(key=lambda x: x['simility'], reverse=True)
         
         return coincidences
+        
+    def find_headers(self, text):
+        return
     
-    def get_info_modelo(self):
+    def get_model_info(self):
         """Retorna información del modelo cargado"""
         return {
             'total_words': self.model['total_words'],
             'vocabulario_size': self.model['vocabulario_size'],
-            'umbral_similitud': self.umbral,
+            'threshold_similarity': self.threshold,
             'campos_disponibles': list(self.model['key_fields'].keys())
         }
