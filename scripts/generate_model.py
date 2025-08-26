@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import FeatureUnion
 from sklearn.base import BaseEstimator, TransformerMixin
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, csr_matrix
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,13 +25,13 @@ class ModelGenerator(TransformerMixin, BaseEstimator):
     def transform(self, X: List[str] | str) -> spmatrix:
         """
         X: iterable de strings (o un único string).
-        Si el vectorizador ya fue entrenado, devuelve la matriz TF-IDF (sparse),
-        si no, devuelve fallback numérico.
+        Si el vectorizador ya fue entrenado, devuelve la matriz TF-IDF (sparse).
+        Si no está entrenado o ocurre un error, se lanza excepción (no hay fallback numérico).
         """
         logger.debug("Llamada a transform() con X de tipo %s", type(X))
-        if not X :
-            logger.warning("transform() recibió X=None, devolviendo matriz vacía.")
-            return np.empty((0, 0))
+        if not X:
+            logger.warning("transform() recibió X vacío, devolviendo matriz sparse vacía (0x0).")
+            return csr_matrix((0, 0))
         # permitir string único
         single_string = False
         if isinstance(X, str):
@@ -40,19 +40,18 @@ class ModelGenerator(TransformerMixin, BaseEstimator):
             single_string = True
 
         vec = getattr(self, "vectorizer_union", None)
-        if vec is not None:
-            try:
-                logger.debug("Usando vectorizer_union para transformar X.")
-                out = vec.transform(X)
-                logger.debug("Transformación exitosa. Shape: %s", out.shape)
-                return out[0] if single_string else out
-            except Exception as e:
-                logger.exception("Error al transformar con vectorizer_union; se usará fallback.")
-                # fallback si algo falla
-                pass
-        logger.warning("No se pudo usar vectorizer_union, usando fallback numérico.")
-        arr = np.full((len(X), 1), fill_value=self.param)
-        return arr[0] if single_string else arr
+        if vec is None:
+            logger.error("vectorizer_union no está inicializado; no existe fallback. Lanza RuntimeError.")
+            raise RuntimeError("vectorizer_union no entrenado; ejecuta generate_model() primero.")
+
+        try:
+            logger.debug("Usando vectorizer_union para transformar X.")
+            out = vec.transform(X)
+            logger.debug("Transformación exitosa. Shape: %s", out.shape)
+            return out[0] if single_string else out
+        except Exception as e:
+            logger.exception("Error al transformar con vectorizer_union; se propaga la excepción.")
+            raise
          
     def generate_model(self, config_path: str, project_root: str):
         logger.info("Iniciando generación de modelo.")
