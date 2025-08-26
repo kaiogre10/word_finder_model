@@ -5,7 +5,6 @@ from typing import List, Any, Dict, Literal
 from scipy.sparse import spmatrix
 from sklearn.metrics.pairwise import cosine_similarity
 import logging
-logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,17 @@ class WordFinder:
         if not text:
             return []
 
-        X: spmatrix = self.vectorizer.transform(text)
+        # aceptar string único también
+        single_string = False
+        if isinstance(text, str):
+            text = [text]
+            single_string = True
+
+        try:
+            X: spmatrix = self.vectorizer.transform(text)
+        except Exception as e:
+            logger.exception("Error transformando texto con vectorizer; devolviendo lista vacía.")
+            return []
 
         if search_type == "global":
             candidates = self.model.get('global_words', [])

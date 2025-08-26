@@ -8,7 +8,6 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.base import BaseEstimator, TransformerMixin
 from scipy.sparse import spmatrix
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class ModelGenerator(TransformerMixin, BaseEstimator):
                 logger.debug("Transformación exitosa. Shape: %s", out.shape)
                 return out[0] if single_string else out
             except Exception as e:
-                logger.error("Error al transformar con vectorizer_union: %s", e, exc_info=True)
+                logger.exception("Error al transformar con vectorizer_union; se usará fallback.")
                 # fallback si algo falla
                 pass
         logger.warning("No se pudo usar vectorizer_union, usando fallback numérico.")
@@ -213,3 +212,6 @@ class ModelGenerator(TransformerMixin, BaseEstimator):
         logger.info(f"  - Vocabulario: {model['vocabulario_size']} n-gramas")
         logger.info(f"  - Palabras clave globales: {len(global_words)} | encabezados: {len(header_words)}")
         logger.info(f"  - Guardado en: {output_path}")
+
+        # (Opcional) devolver el modelo para uso directo desde main
+        return model
