@@ -1,216 +1,140 @@
 import os
-import yaml
-import pickle
-from typing import List, Dict, Any
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.pipeline import FeatureUnion
-from sklearn.base import BaseEstimator, TransformerMixin
-from scipy.sparse import spmatrix, csr_matrix
+import re
 import logging
+import pickle
+import unicodedata
+import yaml
+from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
-class ModelGenerator(TransformerMixin, BaseEstimator):
-    def __init__(self, config_path: str, project_root: str, param: int=1):
+class ModelGenerator:
+    def __init__(self, config_file: str, project_root: str):
         self.project_root = project_root
-        self.config = config_path
-        self.param = param
+        self.config_file = config_file
+        
+    def _normalize(self, s: str) -> str:
+        if not s:
+            return ""
+        s = s.strip().lower()
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(ch for ch in s if not unicodedata.combining(ch))
+        s = re.sub(r"[^a-zA-Z0-9]", "", s)  # quita espacios, signos y también _        
+        return s
 
-    def fit(self, X=None, y=None):
-        logger.debug("Llamada a fit() con X=%s, y=%s", type(X), type(y))
-        # compatibilidad sklearn; no hay estado entrenable aquí
-        return self
+    def _ngrams(self, s: str, n: int) -> List[str]:
+        if n <= 0 or not s:
+            return []
+        if len(s) < n:
+            return []
+        return [s[i:i+n] for i in range(len(s) - n + 1)]
 
-    def transform(self, X: List[str] | str) -> spmatrix:
+    def generate_model(self) -> Dict[str, Any]:
         """
-        X: iterable de strings (o un único string).
-        Si el vectorizador ya fue entrenado, devuelve la matriz TF-IDF (sparse).
-        Si no está entrenado o ocurre un error, se lanza excepción (no hay fallback numérico).
+        Lee YAML, normaliza variantes, precomputa n-gramas 2-5
+        y guarda un pickle con toda la info necesaria para WordFinder.
         """
-        logger.debug("Llamada a transform() con X de tipo %s", type(X))
-        if not X:
-            logger.warning("transform() recibió X vacío, devolviendo matriz sparse vacía (0x0).")
-            return csr_matrix((0, 0))
-        # permitir string único
-        single_string = False
-        if isinstance(X, str):
-            logger.debug("transform() recibió un string único, convirtiendo a lista.")
-            X = [X]
-            single_string = True
+        if not os.path.exists(self.config_file):
+            raise FileNotFoundError(f"No existe config: {self.config_file}")
+            
+        with open(self.config_file, "r", encoding="utf-8") as f:
+            if self.config_file:
 
-        vec = getattr(self, "vectorizer_union", None)
-        if vec is None:
-            logger.error("vectorizer_union no está inicializado; no existe fallback. Lanza RuntimeError.")
-            raise RuntimeError("vectorizer_union no entrenado; ejecuta generate_model() primero.")
-
+                self.cfg: Dict[str, Any] = yaml.safe_load(f)
+            
+        self.params: Dict[str, Any] = self.cfg.get("params", {})
+        # rango n-gramas
+        ngr: Tuple[int, int] = self.params.get("char_ngram_range", [2, 5])
         try:
-            logger.debug("Usando vectorizer_union para transformar X.")
-            out = vec.transform(X)
-            logger.debug("Transformación exitosa. Shape: %s", out.shape)
-            return out[0] if single_string else out
-        except Exception as e:
-            logger.exception("Error al transformar con vectorizer_union; se propaga la excepción.")
-            raise
-         
-    def generate_model(self, config_path: str, project_root: str):
-        logger.info("Iniciando generación de modelo.")
-        self.config = config_path
-        self.project_root = project_root
+            n_min, n_max = int(ngr[0]), int(ngr[1])
+        except Exception:
+            n_min, n_max = 2, 5
+        if n_min < 1 or n_max < n_min:
+            n_min, n_max = 2, 5
+        self.params["char_ngram_range"] = [n_min, n_max]
 
-        logger.info(f"Cargando configuración desde: {config_path}")
-        # cargar YAML con validaciones básicas
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
+        key_fields: Dict[str, Any] = self.cfg.get("key_fields", {}) 
+        descriptivo: List[str] = self.cfg.get("descriptivo", []) 
+        cuantitativo: List[str] = self.cfg.get("cuantitativo", []) 
+        identificador: List[str] = self.cfg.get("identificador", []) 
 
-        key_fields: Dict[str, Any] = config.get('key_fields', {})
-        params: Dict[str, Any] = config.get('params', {})
-
-        logger.debug(f"Campos clave encontrados: {list(key_fields.keys())}")
-        logger.debug(f"Parámetros de configuración: {params}")
-
-        # 1) Construcción de listas de candidatos
+        # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
-        seen: set[str] = set()
 
         for field, variants in key_fields.items():
-            logger.debug(f"Procesando campo: {field} con variantes: {variants}")
             if variants is None:
-                logger.warning(f"Campo '{field}' sin variantes (None) — se omite.")
                 continue
             if isinstance(variants, str):
                 variants = [variants]
             if not isinstance(variants, (list, tuple)):
-                logger.warning(f"Formato inesperado para '{field}': {type(variants).__name__} — se omite.")
                 continue
-
-            cleaned: List[str] = []
-            for variant in variants:
-                if not isinstance(variant, str):
-                    logger.warning(f"Variante no string encontrada en '{field}': {variant} — se omite.")
+            for v in variants:
+                if not isinstance(v, str):
                     continue
-                s = variant.strip()
+                s = self._normalize(v)
                 if not s:
                     continue
-                key_norm = s.lower()
-                if key_norm in seen:
-                    logger.debug(f"Variante normalizada repetida '{key_norm}' en '{field}' — se omite.")
-                    continue
-                seen.add(key_norm)
-                cleaned.append(s)
+                global_words.append(s)
                 variant_to_field[s] = field
-            if cleaned:
-                logger.debug(f"Variantes limpias para '{field}': {cleaned}")
-                global_words.extend(cleaned)
 
-        logger.info("Procesando encabezados de tabla...")
-        header_sections: Dict[str, List[str]] = {
-            'descriptivo': config.get('descriptivo', []) or [],
-            'cuantitativo': config.get('cuantitativo', []) or [],
-            'identificador': config.get('identificador', []) or [],
-        }
         header_words: List[str] = []
-        header_to_group: Dict[str, str] = {}
-        seen_headers: set[str] = set()
-        for group, headers in header_sections.items():
-            for h in headers:
-                if not isinstance(h, str):
-                    continue
-                s = h.strip()
-                if not s:
-                    continue
-                key_norm = s.lower()
-                if key_norm in seen_headers:
-                    continue
-                seen_headers.add(key_norm)
-                header_words.append(s)
-                header_to_group[s] = group
+        for h in (descriptivo + cuantitativo + identificador):
+            if not isinstance(h, str):
+                continue
+            s = self._normalize(h)
+            if not s:
+                continue
+            header_words.append(s)
 
-        # Unión total solo para entrenar el vectorizador
-        all_words: List[str] = global_words + header_words
-        logger.info(f"Generando modelo con {len(all_words)} palabras clave únicas.")
-        logger.debug(f"Palabras clave finales: {all_words}")
+        # Unificar y deduplicar preservando orden
+        combined_words: List[str] = list(dict.fromkeys(global_words + header_words))
 
-        # 2) Vectorizador híbrido
-        word_ngram = tuple(params.get('ngram_range', [1, 2]))
-        char_ngram = tuple(params.get('char_ngram_range', [3, 5]))
-        logger.info(f"Parámetros de ngrama: word_ngram={word_ngram}, char_ngram={char_ngram}")
+        # Precomputar n-gramas y buckets por longitud
+        grams_index: List[Dict[str, Any]] = []
+        buckets_by_len: Dict[int, List[int]] = {}
+        
+        for i, w in enumerate(combined_words):
+            length = len(w)
+            buckets_by_len.setdefault(length, []).append(i)
+            
+            gmap: Dict[int, List[str]] = {}
+            for n in range(n_min, n_max + 1):
+                gmap[n] = self._ngrams(w, n)
+                
+            grams_index.append({
+                "len": length,
+                "grams": gmap  # dict n -> lista de n-gramas
+            })
 
-        logger.info("Inicializando TfidfVectorizer para palabras.")
-        word_vect = TfidfVectorizer(
-            analyzer='word',
-            strip_accents='ascii',
-            lowercase=True,
-            token_pattern=r'(?u)\b\w+\b',
-            ngram_range=word_ngram,
-            sublinear_tf=True,
-            norm='l2',
-            max_df=0.95,
-            min_df=1
-        )
-
-        logger.info("Inicializando TfidfVectorizer para caracteres (char_wb).")
-        char_vect = TfidfVectorizer(
-            analyzer='char_wb',
-            strip_accents='ascii',
-            lowercase=True,
-            ngram_range=char_ngram,
-            sublinear_tf=True,
-            norm='l2',
-            max_df=0.99,
-            min_df=1
-        )
-
-        logger.info("Combinando y entrenando vectorizadores.")
-        vectorizer_union = FeatureUnion([('word', word_vect), ('char', char_vect)])
-        vectorizer_union.fit(all_words)
-        logger.info("Vectorizadores entrenados correctamente.")
-        self.vectorizer_union = vectorizer_union
-
-        # 3) Vocab size
-        try:
-            vocab_size: int = 0
-            for _name, tr in getattr(vectorizer_union, "transformer_list", []):
-                vocab = getattr(tr, "vocabulary_", None)
-                if vocab is not None:
-                    logger.debug(f"Vocabulario para '{vocab}': {len(vocab)} términos.")
-                    vocab_size += len(vocab)
-            logger.info(f"Tamaño total del vocabulario: {vocab_size}")
-        except Exception as e:
-            logger.error(f"Error al calcular el tamaño del vocabulario: {e}", exc_info=True)
-            vocab_size = 0
-
-        # 4) Precomputar matrices Y por tipo
-        # Nota: se almacenan como matrices sparse; pickle las maneja bien.
-        Y_global: spmatrix = vectorizer_union.transform(global_words)
-        Y_headers: spmatrix = vectorizer_union.transform(header_words)
-
-        # 5) Guardar modelo
-        model = {
-            'vectorizer': vectorizer_union,
-            'params': params,
-            'key_fields': key_fields,              # para mapping/inspección
-            'global_words': global_words,          # lista candidatos globales
-            'variant_to_field': variant_to_field,  # mapea variante -> campo
-            'header_words': header_words,          # lista candidatos encabezados
-            'table_headers': header_to_group,      # mapea encabezado -> grupo
-            'Y_global': Y_global,                  # matriz candidatos globales
-            'Y_headers': Y_headers,                # matriz candidatos encabezados
-            'total_words': len(all_words),
-            'vocabulario_size': vocab_size,
+        model: Dict[str, Any] = {
+            "params": self.params,
+            "key_fields": key_fields,
+            "global_words": global_words,
+            "header_words": header_words,
+            "variant_to_field": variant_to_field,
+            "combined_words": combined_words,
+            "grams_index": grams_index,
+            "buckets_by_len": {int(k): v for k, v in buckets_by_len.items()},
+            # campos legacy (compatibilidad): quedan como None
+            "vectorizer": None,
+            "Y_global": None,
+            "Y_headers": None,
+            "meta": {},
+            "total_words": len(combined_words),
+            "vocabulario_size": None,
         }
 
-        output_path = os.path.join(project_root, 'data', 'word_finder_model.pkl')
-        logger.info(f"Guardando modelo en: {output_path}")
+        output_path = os.path.join(self.project_root, "data", "word_finder_model.pkl")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'wb') as f:
+        
+        with open(output_path, "wb") as f:
             pickle.dump(model, f)
-        logger.info("Modelo guardado correctamente.")
-        logger.info(f"✓ Modelo generado exitosamente:")
-        logger.info(f"  - Vocabulario: {model['vocabulario_size']} n-gramas")
-        logger.info(f"  - Palabras clave globales: {len(global_words)} | encabezados: {len(header_words)}")
-        logger.info(f"  - Guardado en: {output_path}")
-
-        # (Opcional) devolver el modelo para uso directo desde main
+            
+        logger.info("Modelo (n-gramas binarios) guardado en: %s", output_path)
         return model
+
+if __name__ == "__main__":
+    # Uso de ejemplo:
+    generator = ModelGenerator("data/config.yaml", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    generator.generate_model()

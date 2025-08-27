@@ -1,15 +1,21 @@
-
 params:
-  ngram_range: [1, 2]          # para word n-grams
-  char_ngram_range: [3, 5]     # para char_wb n-grams
-  threshold_similarity: 0.75
-  
+  char_ngram_range: [2, 5]
+  threshold_similarity: 0.60
+  thresholds_by_len:
+    3: 0.80
+    6: 0.70
+    10: 0.65
+    default: 0.60
+  weights_by_n: {2: 0.5, 3: 0.7, 4: 0.85, 5: 1.0}
+        
 key_fields:
   MontoTotalDocumento: 
     - "total" 
     - "total:"
     - "total a pagar"
     - "importe total"
+    - "importe total"
+    - "usted debe"
 
   Subtotal:
     - "subtotal"
@@ -18,10 +24,8 @@ key_fields:
     - "total de articulos"
     - "total de piezas" 
     - "total de unidades"
-    - "total a pagar"
-    - "importe total"
-    - "usted debe"
-    
+    - "cantidad total de piezas"
+        
   MontoIVAGeneral:
     - "iva"
     - "i.v.a."
@@ -32,8 +36,8 @@ key_fields:
   RFCProveedor:
     - "rfc"
     - "r.f.c."
-    - "rfc"
     - "rfc:"
+    - "r.f.c. :"
     - "registro federal de contribuyentes"
   
   FolioDocumento:
@@ -41,6 +45,7 @@ key_fields:
     - "folio no."
     - "numero de ticket"
     - "ticket no."
+    - "ticket no.:"
     - "no ticket"
 
   FechaDocumento:
@@ -94,4 +99,4 @@ identificador:
 - codigo
 - id
 - clave
-- "sku"
+- sku

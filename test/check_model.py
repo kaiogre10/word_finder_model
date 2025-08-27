@@ -1,13 +1,12 @@
 import os
 import pickle
-from pathlib import Path
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-MODEL_PATH = Path("data/word_finder_model.pkl")
+MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "word_finder_model.pkl"))
 
-def load_model(path: Path):
-    with open(path, "rb") as f:
+def load_model(model_path):
+    with open(model_path, "rb") as f:
         return pickle.load(f)
 
 def iter_vocab_info(vectorizer):
@@ -31,7 +30,7 @@ def iter_vocab_info(vectorizer):
     return infos
 
 def main():
-    if not MODEL_PATH.exists():
+    if not MODEL_PATH:
         print("Modelo no encontrado en", MODEL_PATH)
         return 1
 

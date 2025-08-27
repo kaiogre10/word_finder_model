@@ -33,7 +33,7 @@ if __name__ == "__main__":
     CONFIG_FILE = os.path.join(PROJECT_ROOT, "data", "config.yaml")
     try:
         generator = ModelGenerator(CONFIG_FILE, PROJECT_ROOT)
-        generator.generate_model(CONFIG_FILE, PROJECT_ROOT)
+        generator.generate_model()
         logger.info("Proceso terminado correctamente.")
     except Exception:
         logger.exception("Error en el proceso de generación del modelo.")
