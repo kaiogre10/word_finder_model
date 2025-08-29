@@ -294,13 +294,19 @@ class WordFinder:
 
     def get_model_info(self):
         return {
-            "total_words": len(self.combined_words),
-            "threshold_similarity": self.threshold,
-            "key_words": len(self.key_words),
-            "header_words": len(self.header_words),
-            "combined_words": len(getattr(self, "combined_words", [])),
-            "campos_disponibles": list(self.model.get("key_words", {}).keys())
-        }
+        "total_words": len(self.combined_words),
+        "threshold_similarity": self.threshold,
+        "key_words": len(self.key_words),
+        "header_words": len(self.header_words),
+        "combined_words": len(getattr(self, "combined_words", [])),
+        "campos_disponibles": list(self.model.get("key_words", {}).keys()),
+        "density_encoder_loaded": len(self.density_encoder) > 0,
+        "fields_with_stats": len(self.field_stats),
+        "words_with_normalized_stats": len(self.normalized_stats),
+        "statistics_enabled": len(self.normalized_stats) > 0,
+        "char_ngram_range": self.ngr,
+        "weights_by_n": self.weights_by_n
+    }
 
     def _regex_patterns_rfc(self, query: str) -> float:
         """Patrones regex específicos para RFC con formato real"""
