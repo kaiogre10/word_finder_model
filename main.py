@@ -19,7 +19,7 @@ def configure_logging():
 
         log_dir = os.path.join(os.path.dirname(__file__), "data", "logs")
         os.makedirs(log_dir, exist_ok=True)
-        fh = RotatingFileHandler(os.path.join(log_dir, "app.log"), maxBytes=5_000_000, backupCount=3, encoding="utf-8")
+        fh = RotatingFileHandler(os.path.join(log_dir, "app.txt"), maxBytes=5_000_000, backupCount=3, encoding="utf-8")
         fh.setFormatter(fmt)
         fh.setLevel(level)
         root.addHandler(fh)

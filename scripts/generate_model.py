@@ -40,11 +40,12 @@ class ModelGenerator:
         with open(self.config_file, "r", encoding="utf-8") as f:
             if self.config_file:
 
-                self.cfg: Dict[str, Any] = yaml.safe_load(f)
+                self.config: Dict[str, Any] = yaml.safe_load(f)
             
-        self.params: Dict[str, Any] = self.cfg.get("params", {})
+        self.params: Dict[str, Any] = self.config.get("params", {})
         # rango n-gramas
         ngr: Tuple[int, int] = self.params.get("char_ngram_range", [2, 5])
+        logger.info(f"Rango elegido: {ngr}")
         try:
             n_min, n_max = int(ngr[0]), int(ngr[1])
         except Exception:
@@ -53,16 +54,14 @@ class ModelGenerator:
             n_min, n_max = 2, 5
         self.params["char_ngram_range"] = [n_min, n_max]
 
-        key_fields: Dict[str, Any] = self.cfg.get("key_fields", {}) 
-        descriptivo: List[str] = self.cfg.get("descriptivo", []) 
-        cuantitativo: List[str] = self.cfg.get("cuantitativo", []) 
-        identificador: List[str] = self.cfg.get("identificador", []) 
-
+        key_words: Dict[str, Any] = self.config.get("key_words", {}) 
+        header_words_config: Dict[str, List[str]] = self.config.get("header_words", {})
+        
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
 
-        for field, variants in key_fields.items():
+        for field, variants in key_words.items():
             if variants is None:
                 continue
             if isinstance(variants, str):
@@ -79,13 +78,19 @@ class ModelGenerator:
                 variant_to_field[s] = field
 
         header_words: List[str] = []
-        for h in (descriptivo + cuantitativo + identificador):
-            if not isinstance(h, str):
+        variant_to_header_category: Dict[str, str] = {}
+        
+        for category, words_list in header_words_config.items():
+            if not isinstance(words_list, list):
                 continue
-            s = self._normalize(h)
-            if not s:
-                continue
-            header_words.append(s)
+            for word in words_list:
+                if not isinstance(word, str):
+                    continue
+                s: str = self._normalize(word)
+                if not s:
+                    continue
+                header_words.append(s)
+                variant_to_header_category[s] = category
 
         # Unificar y deduplicar preservando orden
         combined_words: List[str] = list(dict.fromkeys(global_words + header_words))
@@ -93,36 +98,44 @@ class ModelGenerator:
         # Precomputar n-gramas y buckets por longitud
         grams_index: List[Dict[str, Any]] = []
         buckets_by_len: Dict[int, List[int]] = {}
-        
+
+        # Para estadísticas
+        ngram_stats: Dict[int, List[int]] = {n: [] for n in range(n_min, n_max + 1)}
+        total_ngrams_all = 0  # Contador total de n-gramas
+
         for i, w in enumerate(combined_words):
             length = len(w)
             buckets_by_len.setdefault(length, []).append(i)
-            
+
             gmap: Dict[int, List[str]] = {}
             for n in range(n_min, n_max + 1):
-                gmap[n] = self._ngrams(w, n)
-                
+                ngrams = self._ngrams(w, n)
+                gmap[n] = ngrams
+                ngram_stats[n].append(len(ngrams))  
+                total_ngrams_all += len(ngrams)
+
             grams_index.append({
                 "len": length,
-                "grams": gmap  # dict n -> lista de n-gramas
+                "grams": gmap
             })
+
+        # Mostrar estadísticas de n-gramas por palabra y por n
+        for n in range(n_min, n_max + 1):
+            total_ngrams = sum(ngram_stats[n])
+            logger.info(f"n={n}: total de n-gramas generados={total_ngrams}, palabras={len(ngram_stats[n])}, promedio por palabra={total_ngrams/len(ngram_stats[n]) if ngram_stats[n] else 0:.2f}")
+            for idx, count in enumerate(ngram_stats[n]):
+                logger.debug(f"  Palabra #{idx+1} ({combined_words[idx]}): {count} n-gramas de tamaño {n}")
+
+        logger.info(f"Cantidad total de palabras en combined_words: {len(combined_words)}")
+        logger.info(f"Cantidad total de n-gramas generados (todos los tamaños): {total_ngrams_all}")
 
         model: Dict[str, Any] = {
             "params": self.params,
-            "key_fields": key_fields,
-            "global_words": global_words,
-            "header_words": header_words,
+            "variant_to_header_category": variant_to_header_category,
             "variant_to_field": variant_to_field,
             "combined_words": combined_words,
             "grams_index": grams_index,
-            "buckets_by_len": {int(k): v for k, v in buckets_by_len.items()},
-            # campos legacy (compatibilidad): quedan como None
-            "vectorizer": None,
-            "Y_global": None,
-            "Y_headers": None,
-            "meta": {},
-            "total_words": len(combined_words),
-            "vocabulario_size": None,
+            # "buckets_by_len": {int(k): v for k, v in buckets_by_len.items()},
         }
 
         output_path = os.path.join(self.project_root, "data", "word_finder_model.pkl")

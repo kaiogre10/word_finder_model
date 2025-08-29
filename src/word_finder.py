@@ -51,40 +51,44 @@ class WordFinder:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Modelo no encontrado en {model_path}")
         with open(model_path, "rb") as f:
-            model = pickle.load(f)
-        if not isinstance(model, dict):
+            self.model = pickle.load(f)
+        if not isinstance(self.model, dict):
             raise ValueError("El pickle no tiene el formato esperado (dict).")
-        return model
+        return self.model
 
     def _apply_active_model(self):
         # listas
-        self.global_words: List[str] = [self._normalize(str(w)) for w in self.model.get("global_words", []) or []]
+        self.key_words: List[str] = [self._normalize(str(w)) for w in self.model.get("key_words", []) or []]
         self.header_words: List[str] = [self._normalize(str(w)) for w in self.model.get("header_words", []) or []]
-        self.combined_words: List[str] = self.model.get("combined_words") or list(dict.fromkeys(self.global_words + self.header_words))
+        self.combined_words: List[str] = self.model.get("combined_words") or list(dict.fromkeys(self.key_words + self.header_words))
         
-        # mapping
-        vt: Dict[str, str] = self.model.get("variant_to_field", {}) or {}
-        self.variant_to_field: Dict[str, Any] = {self._normalize(str(k)): v for k, v in vt.items()}
+        # mapping headers
+        self.vt_header: Dict[str, str] = self.model.get("variant_to_header_category", {}) or {}
+        self.variant_to_header_category: Dict[str, str] = {self._normalize(str(k)): v for k, v in self.vt_header.items()}
+        
+        # mapping para key_fields
+        vt_field: Dict[str, str] = self.model.get("variant_to_field", {}) or {}
+        self.variant_to_field: Dict[str, str] = {self._normalize(str(k)): v for k, v in vt_field.items()}
         
         # params
-        params: Dict[str, Any] = self.model.get("params", {}) or {}
-        ngr = params.get("char_ngram_range", [2, 5]) or [2, 5]
+        self.params: Dict[str, Any] = self.model.get("params", {}) or {}
+        self.ngr = self.params.get("char_ngram_range", [2, 5]) or [2, 5]
         try:
-            self.n_min, self.n_max = int(ngr[0]), int(ngr[1])
+            self.n_min, self.n_max = int(self.ngr[0]), int(self.ngr[1])
         except Exception:
             self.n_min, self.n_max = 2, 5
         if self.n_min < 1 or self.n_max < self.n_min:
             self.n_min, self.n_max = 2, 5
             
-        self.threshold = float(params.get("threshold_similarity", 0.60))
-        self.thresholds_by_len: Dict[Any, Any] = params.get("thresholds_by_len", {}) or {}
+        self.threshold = float(self.params.get("threshold_similarity", 0.60))
+        self.thresholds_by_len: Dict[Any, Any] = self.params.get("thresholds_by_len", {}) or {}
         
         # pesos por n-grama (inversos)
-        wb = params.get("weights_by_n", {})
+        self.wb = self.params.get("weights_by_n", {})
         self.weights_by_n: Dict[int, float] = {}
-        if wb and isinstance(wb, dict):
+        if self.wb and isinstance(self.wb, dict):
             for n in range(self.n_min, self.n_max + 1):
-                self.weights_by_n[n] = float(wb.get(str(n), 1.0))
+                self.weights_by_n[n] = float(self.wb.get(str(n), 1.0))
         else:
             # pesos por defecto inversos
             for n in range(self.n_min, self.n_max + 1):
@@ -95,17 +99,17 @@ class WordFinder:
                 else: self.weights_by_n[n] = 1.0
 
         # índice precomputado desde el pickle
-        grams_index = self.model.get("grams_index")
+        self.grams_index = self.model.get("grams_index")
         self.grams: List[Dict[int, set[str]]] = []
         self.lengths: List[int] = []
         
-        if grams_index:
-            for entry in grams_index:
+        if self.grams_index:
+            for entry in self.grams_index:
                 length = int(entry.get("len", 0))
-                gmap_raw: Dict[int, List[str]] = entry.get("grams", {}) or {}
+                self.gmap_raw: Dict[int, List[str]] = entry.get("grams", {}) or {}
                 gmap_sets: Dict[int, set[str]] = {}
                 for n in range(self.n_min, self.n_max + 1):
-                    gmap_sets[n] = set(gmap_raw.get(n, []) or [])
+                    gmap_sets[n] = set(self.gmap_raw.get(n, []) or [])
                 self.lengths.append(length)
                 self.grams.append(gmap_sets)
         else:
@@ -113,16 +117,16 @@ class WordFinder:
             self.grams = []
             self.lengths = []
             for w in self.combined_words:
-                length = len(w)
-                self.lengths.append(length)
+                self.length = len(w)
+                self.lengths.append(self.length)
                 gmap_sets: Dict[int, set[str]] = {}
                 for n in range(self.n_min, self.n_max + 1):
                     gmap_sets[n] = set(self._ngrams(w, n))
                 self.grams.append(gmap_sets)
 
         # buckets por longitud
-        buckets: Dict[int, List[int]] = self.model.get("buckets_by_len") or {}
-        self.buckets_by_len: Dict[int, List[int]] = {int(k): list(v) for k, v in buckets.items()}
+        self.buckets: Dict[int, List[int]] = self.model.get("buckets_by_len") or {}
+        self.buckets_by_len: Dict[int, List[int]] = {int(k): list(v) for k, v in self.buckets.items()}
         if not self.buckets_by_len:
             for i, length in enumerate(self.lengths):
                 self.buckets_by_len.setdefault(length, []).append(i)
@@ -130,8 +134,8 @@ class WordFinder:
     def _len_threshold(self, length: int) -> float:
         """Obtiene umbral por longitud del candidato"""
         if self.thresholds_by_len:
-            int_keys = sorted([int(k) for k in self.thresholds_by_len.keys() if str(k).isdigit()])
-            for k in int_keys:
+            self.int_keys = sorted([int(k) for k in self.thresholds_by_len.keys() if str(k).isdigit()])
+            for k in self.int_keys:
                 if length <= k:
                     try:
                         return float(self.thresholds_by_len.get(str(k), self.thresholds_by_len.get(k, self.threshold)))
@@ -213,9 +217,12 @@ class WordFinder:
                 thr = self._len_threshold(len(cand))
                 
                 if best_score >= thr:
-                    field = self.variant_to_field.get(cand)
+                    key_field = self.variant_to_field.get(cand)
+                    header_category = self.variant_to_header_category.get(cand)
+                    
                     results.append({
-                        "field": field,
+                        "key_field": key_field,
+                        "header_category": header_category,
                         "word_found": cand,
                         "similarity": float(best_score),
                         "query": q
@@ -226,12 +233,11 @@ class WordFinder:
     def get_model_info(self):
         return {
             "total_words": len(self.combined_words),
-            "vocabulario_size": None,
             "threshold_similarity": self.threshold,
-            "global_words": len(self.global_words),
+            "key_words": len(self.key_words),
             "header_words": len(self.header_words),
             "combined_words": len(getattr(self, "combined_words", [])),
-            "campos_disponibles": list(self.model.get("key_fields", {}).keys())
+            "campos_disponibles": list(self.model.get("key_words", {}).keys())
         }
 
     def _regex_patterns_rfc(self, query: str) -> float:
