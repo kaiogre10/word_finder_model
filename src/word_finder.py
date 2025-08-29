@@ -73,6 +73,12 @@ class WordFinder:
         # params
         self.params: Dict[str, Any] = self.model.get("params", {}) or {}
         self.ngr = self.params.get("char_ngram_range", [2, 5]) or [2, 5]
+        # Cargar estadísticas del modelo
+        self.density_encoder: Dict[str, float] = self.model.get("density_encoder", {})
+        self.field_stats: Dict[str, Dict[str, List[float]]] = self.model.get("field_stats", {})
+        self.normalized_stats: Dict[str, Dict[str, float]] = self.model.get("normalized_stats", {})
+        self.MAX_CHAR_COUNT = 20.0
+        self.MAX_MEAN = 113.0
         try:
             self.n_min, self.n_max = int(self.ngr[0]), int(self.ngr[1])
         except Exception:
@@ -176,6 +182,47 @@ class WordFinder:
         if den <= 0.0:
             return 0.0
         return num / den
+        
+    def _calculate_query_stats(self, query: str, field: str) -> Dict[str, float]:
+        """Calcula estadísticas normalizadas para la query"""
+        chars = list(query)
+        values = [self.density_encoder.get(c, 0) for c in chars]
+        char_count = float(len(query))
+        mean_val = sum(values) / char_count if char_count else 0.0
+        variance = sum((v - mean_val) ** 2 for v in values) / char_count if char_count else 0.0
+        std_dev = variance ** 0.5
+        
+        # Normalizar igual que en el modelo
+        norm_stats = {}
+        norm_stats["char_count_n"] = min(char_count / self.MAX_CHAR_COUNT, 1.0)
+        norm_stats["mean_n"] = mean_val / self.MAX_MEAN
+        
+        # Normalización por campo para variance y std_dev
+        if field in self.field_stats:
+            var_min, var_max = min(self.field_stats[field]["variance"]), max(self.field_stats[field]["variance"])
+            std_min, std_max = min(self.field_stats[field]["std_dev"]), max(self.field_stats[field]["std_dev"])
+            norm_stats["variance_n"] = (variance - var_min) / (var_max - var_min) if var_max != var_min else 1.0
+            norm_stats["std_dev_n"] = (std_dev - std_min) / (std_max - std_min) if std_max != std_min else 1.0
+        else:
+            norm_stats["variance_n"] = 0.0
+            norm_stats["std_dev_n"] = 0.0
+        
+        return norm_stats
+
+    def _stats_similarity(self, stats_a: Dict[str, float], stats_b: Dict[str, float]) -> float:
+        """Calcula similitud coseno entre vectores de estadísticas"""
+        vector_a = [stats_a.get("char_count_n", 0), stats_a.get("mean_n", 0), 
+                    stats_a.get("variance_n", 0), stats_a.get("std_dev_n", 0)]
+        vector_b = [stats_b.get("char_count_n", 0), stats_b.get("mean_n", 0), 
+                    stats_b.get("variance_n", 0), stats_b.get("std_dev_n", 0)]
+        
+        dot_product = sum(a * b for a, b in zip(vector_a, vector_b))
+        norm_a = sum(a * a for a in vector_a) ** 0.5
+        norm_b = sum(b * b for b in vector_b) ** 0.5
+        
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot_product / (norm_a * norm_b)
 
     def _build_query_grams(self, q: str) -> Dict[int, set[str]]:
         """Construye n-gramas de la consulta"""
@@ -205,30 +252,45 @@ class WordFinder:
             best_idx = None
             best_score = 0.0
 
-            # Comparar contra TODOS los candidatos (sin filtrar por longitud)
+# Comparar contra TODOS los candidatos
             for i in range(len(self.combined_words)):
-                score = self._score_binary_cosine_multi_n(self.grams[i], grams_q)
-                if score > best_score:
-                    best_score = score
+                cand = self.combined_words[i]
+                
+                # Score de n-gramas
+                ngram_score = self._score_binary_cosine_multi_n(self.grams[i], grams_q)
+                
+                # Score de estadísticas (si están disponibles)
+                stats_score = 0.0
+                field = self.variant_to_field.get(cand)
+                if field and cand in self.normalized_stats:
+                    query_stats = self._calculate_query_stats(q, field)
+                    candidate_stats = self.normalized_stats[cand]
+                    stats_score = self._stats_similarity(query_stats, candidate_stats)
+                
+                # Score combinado (70% n-gramas, 30% estadísticas)
+                combined_score = 0.7 * ngram_score + 0.3 * stats_score
+                
+                if combined_score > best_score:
+                    best_score = combined_score
                     best_idx = i
 
-            if best_idx is not None:
-                cand = self.combined_words[best_idx]
-                thr = self._len_threshold(len(cand))
-                
-                if best_score >= thr:
-                    key_field = self.variant_to_field.get(cand)
-                    header_category = self.variant_to_header_category.get(cand)
+                if best_idx is not None:
+                    cand = self.combined_words[best_idx]
+                    thr = self._len_threshold(len(cand))
                     
-                    results.append({
-                        "key_field": key_field,
-                        "header_category": header_category,
-                        "word_found": cand,
-                        "similarity": float(best_score),
-                        "query": q
-                    })
+                    if best_score >= thr:
+                        key_field = self.variant_to_field.get(cand)
+                        header_category = self.variant_to_header_category.get(cand)
+                        
+                        results.append({
+                            "key_field": key_field,
+                            "header_category": header_category,
+                            "word_found": cand,
+                            "similarity": float(best_score),
+                            "query": q
+                        })
 
-        return results if not single else (results[0:1] if results else [])
+            return results if not single else (results[0:1] if results else [])
 
     def get_model_info(self):
         return {

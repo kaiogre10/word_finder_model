@@ -1,5 +1,5 @@
 params:
-  char_ngram_range: [1, 5]
+  char_ngram_range: [2, 5]
   threshold_similarity: 0.70
   thresholds_by_len:
     3: 0.80
