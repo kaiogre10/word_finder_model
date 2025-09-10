@@ -137,3 +137,83 @@ def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, 
 
 if __name__ == "__main__":
     run_queries(queries, wf)
+
+
+# Prueba con diferentes inputs
+test_queries = ["total", "iva", "rfc", "folio", "cliente"]
+
+for query in test_queries:
+    result = wf.find_keywords(query)
+    print(f"Query: '{query}'")
+    print(f"Result: {result}")
+    print(f"Type: {type(result)}")
+    if result:
+        print(f"First item keys: {list(result[0].keys())}")
+    print("-" * 50)
+
+print("="*80)
+print("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
+print("="*80)
+
+# Test con queries individuales
+individual_test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal"]
+
+print("\n1. TESTING INDIVIDUAL QUERIES (string input):")
+print("-" * 60)
+for query in individual_test_queries:
+    result = wf.find_keywords(query)
+    print(f"\nInput: '{query}' (type: {type(query)})")
+    print(f"Return type: {type(result)}")
+    print(f"Return value: {result}")
+    print(f"Return length: {len(result)}")
+    if result:
+        print(f"First item type: {type(result[0])}")
+        print(f"First item keys: {list(result[0].keys())}")
+        print(f"First item values: {list(result[0].values())}")
+        for key, value in result[0].items():
+            print(f"  {key}: {value} (type: {type(value)})")
+
+# Test con lista de queries
+print("\n\n2. TESTING LIST INPUT:")
+print("-" * 60)
+list_queries = ["total", "iva", "rfc"]
+result_list = wf.find_keywords(list_queries)
+print(f"\nInput: {list_queries} (type: {type(list_queries)})")
+print(f"Return type: {type(result_list)}")
+print(f"Return value: {result_list}")
+print(f"Return length: {len(result_list)}")
+for i, item in enumerate(result_list):
+    print(f"Item {i}: {item} (type: {type(item)})")
+
+# Test con queries que no tienen match
+print("\n\n3. TESTING NO MATCH CASES:")
+print("-" * 60)
+no_match_queries = ["xyz123", "asdflkj", ""]
+for query in no_match_queries:
+    result = wf.find_keywords(query)
+    print(f"\nInput: '{query}'")
+    print(f"Return: {result} (type: {type(result)}, length: {len(result)})")
+
+# Test detallado de estructura completa
+print("\n\n4. DETAILED STRUCTURE ANALYSIS:")
+print("-" * 60)
+detailed_result = wf.find_keywords("total")
+print(f"Result for 'total': {detailed_result}")
+if detailed_result:
+    item = detailed_result[0]
+    print(f"\nDetailed analysis of first result item:")
+    print(f"  Type: {type(item)}")
+    print(f"  Is dict: {isinstance(item, dict)}")
+    print(f"  Keys count: {len(item.keys())}")
+    print(f"  Keys: {list(item.keys())}")
+    print(f"  Items:")
+    for k, v in item.items():
+        print(f"    '{k}': {repr(v)} (type: {type(v).__name__})")
+
+print("\n" + "="*80)
+print("END OF RETURN VALUE TESTING")
+print("="*80)
+# Usar el método debug
+print("\n5. USING DEBUG METHOD:")
+print("-" * 60)
+debug_result = wf.debug_find_keywords("total")

@@ -38,7 +38,6 @@ class ModelGenerator:
         std_dev = variance ** 0.5
         return {"char_count": char_count, "mean": mean_val, "variance": variance, "std_dev": std_dev}
 
-
     def generate_model(self) -> Dict[str, Any]:
         """
         Lee YAML, normaliza variantes, precomputa n-gramas 2-5
@@ -49,7 +48,6 @@ class ModelGenerator:
             
         with open(self.config_file, "r", encoding="utf-8") as f:
             if self.config_file:
-
                 self.config: Dict[str, Any] = yaml.safe_load(f)
             
         self.params: Dict[str, Any] = self.config.get("params", {})
@@ -67,8 +65,7 @@ class ModelGenerator:
         key_words: Dict[str, Any] = self.config.get("key_words", {}) 
         self.density_encoder: Dict[str, float] = self.config.get("density_encoder", {})
         header_words_config: Dict[str, List[str]] = self.config.get("header_words", {})
-        
-        
+                
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}

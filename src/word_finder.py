@@ -252,7 +252,7 @@ class WordFinder:
             best_idx = None
             best_score = 0.0
 
-# Comparar contra TODOS los candidatos
+            # Comparar contra TODOS los candidatos
             for i in range(len(self.combined_words)):
                 cand = self.combined_words[i]
                 
@@ -281,10 +281,17 @@ class WordFinder:
                     if best_score >= thr:
                         key_field = self.variant_to_field.get(cand)
                         header_category = self.variant_to_header_category.get(cand)
-                        
+
+                        if key_field:
+                            final_key_field = key_field
+                            header_type = None
+                        else:
+                            final_key_field = "header"
+                            header_type = header_category
+
                         results.append({
-                            "key_field": key_field,
-                            "header_category": header_category,
+                            "key_field": final_key_field,
+                            "header_type": header_type,
                             "word_found": cand,
                             "similarity": float(best_score),
                             "query": q
@@ -414,3 +421,26 @@ class WordFinder:
             }
         
         return {}
+
+    def debug_find_keywords(self, text: str | List[str]) -> Dict[str, Any]:
+        """Versión debug que muestra paso a paso lo que hace find_keywords"""
+        print(f"\n=== DEBUG find_keywords ===")
+        print(f"Input: {text} (type: {type(text)})")
+        
+        result = self.find_keywords(text)
+        
+        print(f"Output type: {type(result)}")
+        print(f"Output length: {len(result)}")
+        print(f"Output value: {result}")
+        
+        if result:
+            for i, item in enumerate(result):
+                print(f"\nResult item {i}:")
+                print(f"  Type: {type(item)}")
+                print(f"  Content: {item}")
+                if isinstance(item, dict):
+                    for k, v in item.items():
+                        print(f"    {k}: {v} ({type(v).__name__})")
+        
+        print(f"=== END DEBUG ===\n")
+        return {"debug_info": "complete", "original_result": result}
