@@ -64,7 +64,6 @@ class ModelGenerator:
 
         key_words: Dict[str, Any] = self.config.get("key_words", {}) 
         self.density_encoder: Dict[str, float] = self.config.get("density_encoder", {})
-        header_words_config: Dict[str, List[str]] = self.config.get("header_words", {})
                 
         # Construir vocabulario normalizado
         global_words: List[str] = []
@@ -85,9 +84,6 @@ class ModelGenerator:
                     continue
                 global_words.append(s)
                 variant_to_field[s] = field
-
-        header_words: List[str] = []
-        variant_to_header_category: Dict[str, str] = {}
         
         # Calcular estadísticas por campo
         field_stats: Dict[str, Dict[str, List[float]]] = {}
@@ -124,20 +120,8 @@ class ModelGenerator:
                 norm_stats["std_dev_n"] = (stats["std_dev"] - std_min) / (std_max - std_min) if std_max != std_min else 1.0
                 normalized_stats[word] = norm_stats
         
-        for category, words_list in header_words_config.items():
-            if not isinstance(words_list, list):
-                continue
-            for word in words_list:
-                if not isinstance(word, str):
-                    continue
-                s: str = self._normalize(word)
-                if not s:
-                    continue
-                header_words.append(s)
-                variant_to_header_category[s] = category
-
         # Unificar y deduplicar preservando orden
-        combined_words: List[str] = list(dict.fromkeys(global_words + header_words))
+        main_words: List[str] = global_words
 
         # Precomputar n-gramas y buckets por longitud
         grams_index: List[Dict[str, Any]] = []
@@ -147,7 +131,7 @@ class ModelGenerator:
         ngram_stats: Dict[int, List[int]] = {n: [] for n in range(n_min, n_max + 1)}
         total_ngrams_all = 0  # Contador total de n-gramas
 
-        for i, w in enumerate(combined_words):
+        for i, w in enumerate(main_words):
             length = len(w)
             buckets_by_len.setdefault(length, []).append(i)
 
@@ -168,16 +152,15 @@ class ModelGenerator:
             total_ngrams = sum(ngram_stats[n])
             logger.info(f"n={n}: total de n-gramas generados={total_ngrams}, palabras={len(ngram_stats[n])}, promedio por palabra={total_ngrams/len(ngram_stats[n]) if ngram_stats[n] else 0:.2f}")
             for idx, count in enumerate(ngram_stats[n]):
-                logger.debug(f"  Palabra #{idx+1} ({combined_words[idx]}): {count} n-gramas de tamaño {n}")
+                logger.debug(f"Palabra #{idx+1} ({main_words[idx]}): {count} n-gramas de tamaño {n}")
 
-        logger.info(f"Cantidad total de palabras en combined_words: {len(combined_words)}")
+        logger.info(f"Cantidad total de palabras en key_words: {len(main_words)}")
         logger.info(f"Cantidad total de n-gramas generados (todos los tamaños): {total_ngrams_all}")
 
         model: Dict[str, Any] = {
             "params": self.params,
-            "variant_to_header_category": variant_to_header_category,
             "variant_to_field": variant_to_field,
-            "combined_words": combined_words,
+            "key_words": main_words,
             "grams_index": grams_index,
             "density_encoder": self.density_encoder,
             "field_stats": field_stats,

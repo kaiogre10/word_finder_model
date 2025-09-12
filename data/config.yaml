@@ -1,5 +1,5 @@
 params:
-  char_ngram_range: [2, 5]
+  char_ngram_range: [1, 5]
   threshold_similarity: 0.70
   thresholds_by_len:
     3: 0.80
@@ -41,12 +41,12 @@ key_words:
     - "rfc"
     - "registro federal de contribuyentes"
     - "regimen fiscal"
+    - "razon social"
   
   FolioDocumento:
     - "folio"
     - "folio no."
     - "numero de ticket"
-    - "ticket no."
     - "registro"
     - "ticket no.:"
     - "no ticket"
@@ -64,6 +64,7 @@ key_words:
     - "hora"
     - "date"
     - "fecha y hora"
+    - "hora y fecha"
     
   NombreCliente:
     - "cliente"
@@ -71,36 +72,12 @@ key_words:
     - "usuario"
     - "comprador"
     - "consumidor"
+    - "socio"
     
-    
-  # Negocio:
-  #   - "papeleria"
-  #   - "ferreteria"
-  #   - "farmacia"
-  #   - "supermercado"
-  #   - "boutique"
-  #   - "panaderia"
-  #   - "carniceria"
-  #   - "fruteria"
-  #   - "floreria"
-  #   - "dulceria"
-  #   - "minisuper"
-  #   - "autoservicio"
-  #   - "tienda de conveniencia"
-  #   - "tienda departamental"
-  #   - "tienda de ropa"
-  #   - "tienda de electronicos"
-  #   - "tienda de electrodomesticos"
-  #   - "tienda de regalos"
-  #   - "merceria"
-  #   - "perfumeria"
-  #   - "joyeria"
-  #   - "bazar"
-    
-header_words:
-  descriptivo:
+  HeaderWords:
   - "description"
   - "concepto"
+  - "modelo"
   - "producto"
   - "artículo"
   - "artículos"
@@ -111,8 +88,6 @@ header_words:
   - "referencia"
   - "um"
   - "pza"
-
-  cuantitativo:
   - "cantidad"
   - "cant"
   - "cant."
@@ -137,14 +112,36 @@ header_words:
   - "monto"
   - "valor"
   - "precio unit"
-
-  identificador:
   - "cod"
   - "codigo"
   - "id"
   - "clave"
   - "sku"
-
+      
+  # Negocio:
+  #   - "papeleria"
+  #   - "ferreteria"
+  #   - "farmacia"
+  #   - "supermercado"
+  #   - "boutique"
+  #   - "panaderia"
+  #   - "carniceria"
+  #   - "fruteria"
+  #   - "floreria"
+  #   - "dulceria"
+  #   - "minisuper"
+  #   - "autoservicio"
+  #   - "tienda de conveniencia"
+  #   - "tienda departamental"
+  #   - "tienda de ropa"
+  #   - "tienda de electronicos"
+  #   - "tienda de electrodomesticos"
+  #   - "tienda de regalos"
+  #   - "merceria"
+  #   - "perfumeria"
+  #   - "joyeria"
+  #   - "bazar"
+    
 density_encoder: {
     "0": 0,
     "1": 1,
