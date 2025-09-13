@@ -3,6 +3,9 @@ import random
 import sys
 import pickle
 from typing import List, Dict, Any, Tuple, Optional
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
@@ -13,15 +16,13 @@ from src.word_finder import WordFinder
 MODEL_STD = os.path.join(ROOT, "data", "word_finder_model.pkl")
 wf = WordFinder(MODEL_STD)
 
-print("Threshold:", wf.threshold)
-print(f"Rango de n-ggramas:", wf.ngr)
-print()
+logging.info("Threshold: %s", getattr(wf, "threshold", "N/A"))
+logging.info("Rango de n-ggramas: %s", getattr(wf, "ngr", "N/A"))
 
 with open(MODEL_STD, "rb") as f:
     model = pickle.load(f)
-print("grams_index" in model)
-print(len(model.get("grams_index", [])))
-print()
+logging.info("'grams_index' en model: %s", "grams_index" in model)
+logging.info("Longitud de grams_index: %d", len(model.get("grams_index", [])))
 
 # Queries base
 base_queries = [
@@ -98,74 +99,78 @@ def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, 
             
             
     porcentaje: float = (100.00/len(queries)) * num_matches
-    print(f"{res}")
-    print(f"Resumen: {num_matches}/{len(queries)} matches")
-    print(f"Porcentaje de coincidencia de palabras: {porcentaje}%")
+    logger.info(f"{res}")
+    logger.info(f"Resumen: {num_matches}/{len(queries)} matches")
+    logger.info(f"Porcentaje de coincidencia de palabras: {porcentaje}%")
     
 if __name__ == "__main__":
     run_queries(queries, wf)
 
 # Test simple de estructura de retorno
-print("\n=== Estructura de retorno ===")
+logger.info("\n=== Estructura de retorno ===")
 sample = wf.find_keywords("total")
 if sample:
-    print(f"Ejemplo: {sample[0]}")
+    logger.info(f"Ejemplo: {sample[0]}")
 
 # Prueba con diferentes inputs
 test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 for q in queries:
     result = wf.find_keywords(q)
-    print(f"Query: '{q}'")
-    print(f"Result: {result}")
+    logger.info(f"Query: '{q}'")
+    logger.info(f"Result: {result}")
     if result:
-        print(f"First item keys: {list(result[0].keys())}")
-    print("-" * 50)
+        logger.info(f"First item keys: {list(result[0].keys())}")
+    logger.info("-" * 50)
 
-print("="*80)
-print("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
-print("="*80)
+logger.info("="*80)
+logger.info("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
+logger.info("="*80)
 
 # Test con queries individuales
 individual_test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 
-print("\n1. TESTING INDIVIDUAL QUERIES (string input):")
-print("-" * 60)
+logger.info("\n1. TESTING INDIVIDUAL QUERIES (string input):")
+logger.info("-" * 60)
 for query in individual_test_queries:
     result = wf.find_keywords(query)
-    print(f"\nInput: '{query}")
-    print(f"Return value: {result}")
-    print(f"Return length: {len(result)}")
+    logger.info(f"\nInput: '{query}")
+    logger.info(f"Return value: {result}")
+    logger.info(f"Return length: {len(result)}")
     if result:
-        print(f"First item keys: {list(result[0].keys())}")
-        print(f"First item values: {list(result[0].values())}")
+        logger.info(f"First item keys: {list(result[0].keys())}")
+        logger.info(f"First item values: {list(result[0].values())}")
 
 # Test con lista de queries
-print("\n\n2. TESTING LIST INPUT:")
-print("-" * 60)
+logger.info("\n\n2. TESTING LIST INPUT:")
+logger.info("-" * 60)
 list_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 result_list = wf.find_keywords(list_queries)
-print(f"\nInput: {list_queries}")
-print(f"Return value: {result_list}")
-print(f"Return length: {len(result_list)}")
+logger.info(f"\nInput: {list_queries}")
+logger.info(f"Return value: {result_list}")
+logger.info(f"Return length: {len(result_list)}")
 
 # Test detallado de estructura completa
-print("\n\n4. DETAILED STRUCTURE ANALYSIS:")
-print("-" * 60)
+logger.info("\n\n4. DETAILED STRUCTURE ANALYSIS:")
+logger.info("-" * 60)
 detailed_result = wf.find_keywords("total")
-print(f"Result for 'total': {detailed_result}")
+logger.info(f"Result for 'total': {detailed_result}")
 if detailed_result:
     item = detailed_result[0]
-    print(f"\nDetailed analysis of first result item:")
-    print(f"Is dict: {isinstance(item, dict)}")
-    print(f"Keys count: {len(item.keys())}")
-    print(f"Keys: {list(item.keys())}")
-    print(f"Items:")
+    logger.info(f"\nDetailed analysis of first result item:")
+    logger.info(f"Is dict: {isinstance(item, dict)}")
+    logger.info(f"Keys count: {len(item.keys())}")
+    logger.info(f"Keys: {list(item.keys())}")
+    logger.info(f"Items:")
 
-print("\n" + "="*80)
-print("END OF RETURN VALUE TESTING")
-print("="*80)
+logger.info("\n" + "="*80)
+logger.info("END OF RETURN VALUE TESTING")
+logger.info("="*80)
 # Usar el método debug
-print("\n5. USING DEBUG METHOD:")
-print("-" * 60)
+logger.info("\n5. USING DEBUG METHOD:")
+logger.info("-" * 60)
 debug_result = wf.debug_find_keywords("total")
