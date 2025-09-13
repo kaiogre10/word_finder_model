@@ -7,6 +7,9 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
+logger = logging.getLogger(__name__)
+
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -110,14 +113,10 @@ if __name__ == "__main__":
 logger.info("\n=== Estructura de retorno ===")
 sample = wf.find_keywords("total")
 if sample:
-    logger.info(f"Ejemplo: {sample[0]}")
+    logger.debug(f"Ejemplo: {sample[0]}")
 
 # Prueba con diferentes inputs
 test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 for q in queries:
     result = wf.find_keywords(q)
