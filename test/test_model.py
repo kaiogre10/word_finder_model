@@ -67,7 +67,7 @@ for q in base_queries:
     for _ in range(3):
         queries.append(perturb(q))
 
-def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True, top_n: int = 5):
+def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True, top_n: int = 10):
     num_matches = 0
     num_no_matches = 0
     matches: List[Tuple[str, Dict[str, Any]]] = []
@@ -95,9 +95,12 @@ def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, 
         else:
             num_no_matches += 1
             no_matches.append(q)
-    
+            
+            
+    porcentaje: float = (100.00/len(queries)) * num_matches
     print(f"{res}")
     print(f"Resumen: {num_matches}/{len(queries)} matches")
+    print(f"Porcentaje de coincidencia de palabras: {porcentaje}%")
     
 if __name__ == "__main__":
     run_queries(queries, wf)
@@ -111,9 +114,9 @@ if sample:
 # Prueba con diferentes inputs
 test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 
-for query in test_queries:
-    result = wf.find_keywords(query)
-    print(f"Query: '{query}'")
+for q in queries:
+    result = wf.find_keywords(q)
+    print(f"Query: '{q}'")
     print(f"Result: {result}")
     if result:
         print(f"First item keys: {list(result[0].keys())}")
@@ -143,7 +146,6 @@ print("-" * 60)
 list_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 result_list = wf.find_keywords(list_queries)
 print(f"\nInput: {list_queries}")
-print(f"Return type: {type(result_list)}")
 print(f"Return value: {result_list}")
 print(f"Return length: {len(result_list)}")
 
@@ -159,8 +161,6 @@ if detailed_result:
     print(f"Keys count: {len(item.keys())}")
     print(f"Keys: {list(item.keys())}")
     print(f"Items:")
-    for k, v in item.items():
-        print(f"    '{k}': {repr(v)} (type: {type(v).__name__})")
 
 print("\n" + "="*80)
 print("END OF RETURN VALUE TESTING")

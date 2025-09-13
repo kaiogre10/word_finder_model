@@ -2,9 +2,9 @@ params:
   char_ngram_range: [1, 5]
   threshold_similarity: 0.70
   thresholds_by_len:
-    3: 0.80
-    6: 0.70
-    10: 0.65
+    3: 0.75
+    6: 0.65
+    10: 0.50
     default: 0.60
   weights_by_n: {2: 0.5, 3: 0.7, 4: 0.85, 5: 1.0}
         
