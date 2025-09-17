@@ -117,6 +117,8 @@ key_words:
   - "id"
   - "clave"
   - "sku"
+  - "cant descripcion"
+  - "precio importe"
       
   # Negocio:
   #   - "papeleria"
