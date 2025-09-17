@@ -9,7 +9,6 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
 logger = logging.getLogger(__name__)
 
-
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
@@ -99,8 +98,7 @@ def run_queries(queries: List[str], wf: WordFinder, show_no_match: bool = True, 
         else:
             num_no_matches += 1
             no_matches.append(q)
-            
-            
+
     porcentaje: float = (100.00/len(queries)) * num_matches
     logger.info(f"{res}")
     logger.info(f"Resumen: {num_matches}/{len(queries)} matches")
