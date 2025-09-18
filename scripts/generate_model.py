@@ -1,18 +1,20 @@
 import os
 import re
+import numpy as np
 import logging
 import pickle
 import unicodedata
 import yaml
+from scipy.sparse import csr_matrix 
 from typing import List, Dict, Any, Tuple
-
+from sklearn.feature_extraction.text import TfidfVectorizer
 logger = logging.getLogger(__name__)
 
 class ModelGenerator:
     def __init__(self, config_file: str, project_root: str):
         self.project_root = project_root
         self.config_file = config_file
-        
+            
     def _normalize(self, s: str) -> str:
         if not s:
             return ""
@@ -37,7 +39,7 @@ class ModelGenerator:
         variance = sum((v - mean_val) ** 2 for v in values) / char_count if char_count else 0.0
         std_dev = variance ** 0.5
         return {"char_count": char_count, "mean": mean_val, "variance": variance, "std_dev": std_dev}
-
+        
     def generate_model(self) -> Dict[str, Any]:
         """
         Lee YAML, normaliza variantes, precomputa n-gramas 2-5
@@ -52,7 +54,7 @@ class ModelGenerator:
             
         self.params: Dict[str, Any] = self.config.get("params", {})
         # rango n-gramas
-        ngr: Tuple[int, int] = self.params.get("char_ngram_range", [2, 5])
+        ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", [2, 5]))
         logger.info(f"Rango elegido: {ngr}")
         try:
             n_min, n_max = int(ngr[0]), int(ngr[1])
@@ -62,13 +64,14 @@ class ModelGenerator:
             n_min, n_max = 2, 5
         self.params["char_ngram_range"] = [n_min, n_max]
 
-        key_words: Dict[str, Any] = self.config.get("key_words", {}) 
+        key_words: Dict[str, list[str]] | str = self.config.get("key_words", {}) 
         self.density_encoder: Dict[str, float] = self.config.get("density_encoder", {})
                 
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
-
+        all_vectorizers: Dict[str, TfidfVectorizer] = {}
+        
         for field, variants in key_words.items():
             if variants is None:
                 continue
@@ -84,7 +87,36 @@ class ModelGenerator:
                     continue
                 global_words.append(s)
                 variant_to_field[s] = field
-        
+            try:        
+                vectorizer = TfidfVectorizer(
+                    input='content',
+                    encoding='utf-8',
+                    decode_error='replace',
+                    strip_accents='unicode',
+                    lowercase=True,
+                    preprocessor=None,
+                    tokenizer=None,
+                    analyzer="char_wb",
+                    stop_words=None,
+                    token_pattern=r"(?u)\b\w\w+\b",
+                    ngram_range=ngr,
+                    max_df=1.0,
+                    min_df=1,
+                    max_features=None,
+                    vocabulary=None,
+                    binary=True,
+                    dtype=np.float64,
+                    norm="l2",
+                    use_idf=True,
+                    smooth_idf=True,
+                    sublinear_tf=False,
+                )
+                vectorizer.fit(variants)
+                all_vectorizers[field] = vectorizer
+                
+            except Exception as e:
+                logger.info(f"Error en TF-IDF vectorizer: {e}", exc_info=True)
+                        
         # Calcular estadísticas por campo
         field_stats: Dict[str, Dict[str, List[float]]] = {}
         word_field_stats: Dict[str, Dict[str, float]] = {}
@@ -110,10 +142,8 @@ class ModelGenerator:
             field = variant_to_field.get(word)
             if field and field in field_stats:
                 norm_stats = {}
-                # char_count y mean: normalización absoluta
                 norm_stats["char_count_n"] = min(stats["char_count"] / MAX_CHAR_COUNT, 1.0)
                 norm_stats["mean_n"] = stats["mean"] / MAX_MEAN
-                # variance y std_dev: normalización por campo
                 var_min, var_max = min(field_stats[field]["variance"]), max(field_stats[field]["variance"])
                 std_min, std_max = min(field_stats[field]["std_dev"]), max(field_stats[field]["std_dev"])
                 norm_stats["variance_n"] = (stats["variance"] - var_min) / (var_max - var_min) if var_max != var_min else 1.0
@@ -177,6 +207,5 @@ class ModelGenerator:
         return model
 
 if __name__ == "__main__":
-    # Uso de ejemplo:
     generator = ModelGenerator("data/config.yaml", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     generator.generate_model()

@@ -42,8 +42,6 @@ class WordFinder:
         self.key_words: List[str] = [self._normalize(str(w)) for w in self.model.get("key_words", []) or []]
         vt_field: Dict[str, str] = self.model.get("variant_to_field", {}) or {}
         self.variant_to_field: Dict[str, str] = {self._normalize(str(k)): v for k, v in vt_field.items()}
-
-        # params
         self.params: Dict[str, Any] = self.model.get("params", {}) or {}
         self.ngr = self.params.get("char_ngram_range", [2, 5]) or [2, 5]
         self.density_encoder: Dict[str, float] = self.model.get("density_encoder", {})
@@ -92,7 +90,6 @@ class WordFinder:
                 self.lengths.append(length)
                 self.grams.append(gmap_sets)
         else:
-            # fallback: construir en tiempo de carga
             self.grams = []
             self.lengths = []
             for w in self.key_words:
