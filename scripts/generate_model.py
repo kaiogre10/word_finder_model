@@ -5,7 +5,7 @@ import logging
 import pickle
 import unicodedata
 import yaml
-from scipy.sparse import csr_matrix 
+from scipy.sparse import csc_matrix
 from typing import List, Dict, Any, Tuple
 from sklearn.feature_extraction.text import TfidfVectorizer
 logger = logging.getLogger(__name__)
@@ -40,6 +40,74 @@ class ModelGenerator:
         std_dev = variance ** 0.5
         return {"char_count": char_count, "mean": mean_val, "variance": variance, "std_dev": std_dev}
         
+    def _train_all_vectorizers(self, key_words: Dict[str, list[str]], global_words: List[str]) -> Tuple[Dict[str, TfidfVectorizer], Dict[str, Any]]:
+        """Entrena vectorizers por field + filtro global en una sola pasada"""
+        all_vectorizers = {}
+        
+        # 1. Vectorizers por field
+        for field, variants in key_words.items():
+            if not variants:
+                continue
+            if isinstance(variants, str):
+                variants = [variants]
+            
+            variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
+            variants_normalized = [s for s in variants_normalized if s]
+            
+            if variants_normalized:
+                # Vocabulario del field
+                vocabulary = set()
+                for variant in variants_normalized:
+                    for n in range(self.ngr[0], self.ngr[1] + 1):
+                        vocabulary.update(self._ngrams(variant, n))
+                
+                vectorizer = TfidfVectorizer(
+                    strip_accents="ascii",
+                    # preprocessor=lambda x: x,
+                    ngram_range=(self.ngr[0], self.ngr[1]),
+                    analyzer="char_wb",
+                    use_idf=True,
+                    vocabulary=list(vocabulary),
+                    norm="l2"
+                )
+                X = vectorizer.fit_transform(variants_normalized)
+                all_vectorizers[field] = vectorizer
+                vectorizer.get_feature_names_out()
+                np.array(variants_normalized)
+                logger.info(f"Vectorizador por campo: {X.shape}")
+        
+        # 2. Filtro global (usando todos los n-gramas)
+        global_vocab = set()
+        for word in global_words:
+            for n in range(self.ngr[0], self.ngr[1] + 1):
+                global_vocab.update(self._ngrams(word, n))
+        
+        global_vectorizer = TfidfVectorizer(
+            strip_accents="ascii",
+            ngram_range=(self.ngr[0], self.ngr[1]),
+            analyzer="char_wb",
+            use_idf=True,
+            vocabulary=list(global_vocab),
+            norm="l2"
+        )
+        X = global_vectorizer.fit_transform(global_words)
+        global_vectorizer.get_feature_names_out()
+        np.array(global_words)
+        logger.info(f"Vectorizador Global: {X.shape}")
+        
+        # Extraer pesos del filtro
+        ngram_weights = {
+            ngram: global_vectorizer.idf_[idx] 
+            for ngram, idx in global_vectorizer.vocabulary_.items()
+        }
+        
+        global_filter = {
+            "ngram_weights": ngram_weights,
+            "char_ngram_range": [self.ngr[0], self.ngr[1]]
+        }
+        
+        return all_vectorizers, global_filter
+            
     def generate_model(self) -> Dict[str, Any]:
         """
         Lee YAML, normaliza variantes, precomputa n-gramas 2-5
@@ -54,10 +122,10 @@ class ModelGenerator:
             
         self.params: Dict[str, Any] = self.config.get("params", {})
         # rango n-gramas
-        ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", [2, 5]))
-        logger.info(f"Rango elegido: {ngr}")
+        self.ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", [2, 5]))
+        logger.info(f"Rango elegido: {self.ngr}")
         try:
-            n_min, n_max = int(ngr[0]), int(ngr[1])
+            n_min, n_max = int(self.ngr[0]), int(self.ngr[1])
         except Exception:
             n_min, n_max = 2, 5
         if n_min < 1 or n_max < n_min:
@@ -70,7 +138,6 @@ class ModelGenerator:
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
-        all_vectorizers: Dict[str, TfidfVectorizer] = {}
         
         for field, variants in key_words.items():
             if variants is None:
@@ -87,35 +154,11 @@ class ModelGenerator:
                     continue
                 global_words.append(s)
                 variant_to_field[s] = field
-            try:        
-                vectorizer = TfidfVectorizer(
-                    input='content',
-                    encoding='utf-8',
-                    decode_error='replace',
-                    strip_accents='unicode',
-                    lowercase=True,
-                    preprocessor=None,
-                    tokenizer=None,
-                    analyzer="char_wb",
-                    stop_words=None,
-                    token_pattern=r"(?u)\b\w\w+\b",
-                    ngram_range=ngr,
-                    max_df=1.0,
-                    min_df=1,
-                    max_features=None,
-                    vocabulary=None,
-                    binary=True,
-                    dtype=np.float64,
-                    norm="l2",
-                    use_idf=True,
-                    smooth_idf=True,
-                    sublinear_tf=False,
-                )
-                vectorizer.fit(variants)
-                all_vectorizers[field] = vectorizer
                 
-            except Exception as e:
-                logger.info(f"Error en TF-IDF vectorizer: {e}", exc_info=True)
+            variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
+            variants_normalized = [s for s in variants_normalized if s]
+        # Líneas 118-120 reemplazar por:
+        all_vectorizers, global_filter = self._train_all_vectorizers(key_words, global_words)
                         
         # Calcular estadísticas por campo
         field_stats: Dict[str, Dict[str, List[float]]] = {}
@@ -141,8 +184,8 @@ class ModelGenerator:
         for word, stats in word_field_stats.items():
             field = variant_to_field.get(word)
             if field and field in field_stats:
-                norm_stats = {}
-                norm_stats["char_count_n"] = min(stats["char_count"] / MAX_CHAR_COUNT, 1.0)
+                norm_stats: Dict[str, float] = {}
+                norm_stats["char_count_n"] = min(stats["char_count"] / MAX_CHAR_COUNT, 20.0)
                 norm_stats["mean_n"] = stats["mean"] / MAX_MEAN
                 var_min, var_max = min(field_stats[field]["variance"]), max(field_stats[field]["variance"])
                 std_min, std_max = min(field_stats[field]["std_dev"]), max(field_stats[field]["std_dev"])
@@ -189,6 +232,8 @@ class ModelGenerator:
 
         model: Dict[str, Any] = {
             "params": self.params,
+            "global_filter": global_filter,
+            "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
             "key_words": main_words,
             "grams_index": grams_index,
@@ -199,13 +244,16 @@ class ModelGenerator:
 
         output_path = os.path.join(self.project_root, "data", "word_finder_model.pkl")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        
-        with open(output_path, "wb") as f:
-            pickle.dump(model, f)
+        try:
+            with open(output_path, "wb") as f:
+                pickle.dump(model, f)
+                
+            logger.info("Modelo (n-gramas binarios) guardado en: %s", output_path)
+            return model
             
-        logger.info("Modelo (n-gramas binarios) guardado en: %s", output_path)
-        return model
-
+        except AttributeError as e:
+            logger.info(f"Error costruyendo Modelo: {e}", exc_info=True)
+        
 if __name__ == "__main__":
     generator = ModelGenerator("data/config.yaml", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     generator.generate_model()

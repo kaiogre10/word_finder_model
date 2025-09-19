@@ -4,19 +4,25 @@ import sys
 import pickle
 from typing import List, Dict, Any, Tuple, Optional
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
 logger = logging.getLogger(__name__)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.word_finder import WordFinder
 
-MODEL_STD = os.path.join(ROOT, "data", "word_finder_model.pkl")
-wf = WordFinder(MODEL_STD)
+try:
+    MODEL_STD = os.path.join(ROOT, "data", "word_finder_model.pkl")
+    wf = WordFinder(MODEL_STD, ROOT)
+except Exception as e:
+    logger.info(f"Error estableciendo root: {e}", exc_info=True)
+
 
 logging.info("Threshold: %s", getattr(wf, "threshold", "N/A"))
 logging.info("Rango de n-ggramas: %s", getattr(wf, "ngr", "N/A"))
@@ -108,7 +114,8 @@ if __name__ == "__main__":
     run_queries(queries, wf)
 
 # Test simple de estructura de retorno
-logger.info("\n=== Estructura de retorno ===")
+logger.debug("\n=== Estructura de retorno ===")
+time0 = time.perf_counter()
 sample = wf.find_keywords("total")
 if sample:
     logger.debug(f"Ejemplo: {sample[0]}")
@@ -118,56 +125,48 @@ test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", 
 
 for q in queries:
     result = wf.find_keywords(q)
-    logger.info(f"Query: '{q}'")
-    logger.info(f"Result: {result}")
-    if result:
-        logger.info(f"First item keys: {list(result[0].keys())}")
-    logger.info("-" * 50)
+    logger.debug(f"Query: '{q}'"
+    f"Result: {result}")
 
-logger.info("="*80)
-logger.info("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
-logger.info("="*80)
+logger.debug("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
 
 # Test con queries individuales
 individual_test_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
 
-logger.info("\n1. TESTING INDIVIDUAL QUERIES (string input):")
-logger.info("-" * 60)
+logger.debug("\n1. TESTING INDIVIDUAL QUERIES (string input):")
 for query in individual_test_queries:
     result = wf.find_keywords(query)
-    logger.info(f"\nInput: '{query}")
-    logger.info(f"Return value: {result}")
-    logger.info(f"Return length: {len(result)}")
+    logger.debug(f"\nInput: '{query}' | Return value: {result} | Return length: {len(result)}")
     if result:
-        logger.info(f"First item keys: {list(result[0].keys())}")
-        logger.info(f"First item values: {list(result[0].values())}")
+        logger.debug(f"First item keys: {list(result[0].keys())}")
+        logger.debug(f"First item values: {list(result[0].values())}")
 
 # Test con lista de queries
-logger.info("\n\n2. TESTING LIST INPUT:")
-logger.info("-" * 60)
 list_queries = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
-result_list = wf.find_keywords(list_queries)
-logger.info(f"\nInput: {list_queries}")
-logger.info(f"Return value: {result_list}")
-logger.info(f"Return length: {len(result_list)}")
+logger.debug(
+    "\n\n2. TESTING LIST INPUT:\n" +
+    "-" * 60 +
+    f"\nInput: {list_queries}\n" +
+    f"Return value: {(result_list := wf.find_keywords(list_queries))}\n" +
+    f"Return length: {len(result_list)}"
+)
 
 # Test detallado de estructura completa
-logger.info("\n\n4. DETAILED STRUCTURE ANALYSIS:")
-logger.info("-" * 60)
-detailed_result = wf.find_keywords("total")
-logger.info(f"Result for 'total': {detailed_result}")
+logger.debug(
+    "\n\n4. DETAILED STRUCTURE ANALYSIS:\n" +
+    "-" * 60 +
+    f"\nResult for 'total': {(detailed_result := wf.find_keywords('total'))}"
+)
 if detailed_result:
     item = detailed_result[0]
-    logger.info(f"\nDetailed analysis of first result item:")
-    logger.info(f"Is dict: {isinstance(item, dict)}")
-    logger.info(f"Keys count: {len(item.keys())}")
-    logger.info(f"Keys: {list(item.keys())}")
-    logger.info(f"Items:")
+    logger.debug(
+        f"\nDetailed analysis of first result item:\n"
+        f"Keys count: {len(item.keys())}\n"
+        f"Keys: {list(item.keys())}\n"
+        f"Items:"
+    )
 
-logger.info("\n" + "="*80)
-logger.info("END OF RETURN VALUE TESTING")
-logger.info("="*80)
-# Usar el método debug
-logger.info("\n5. USING DEBUG METHOD:")
-logger.info("-" * 60)
+logger.debug("\n" + "="*80 + "\nEND OF RETURN VALUE TESTING\n" + "="*80)
+logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
+logger.debug("\n5. USING DEBUG METHOD:\n" + "-" * 60)
 debug_result = wf.debug_find_keywords("total")

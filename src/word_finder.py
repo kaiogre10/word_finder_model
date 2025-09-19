@@ -146,6 +146,9 @@ class WordFinder:
                 q = self._normalize(s)
                 if not q:
                     continue
+                
+                if not self._is_potential_keyword(q):
+                    continue
 
                 best_idx = None
                 best_score = 0.0
@@ -183,7 +186,7 @@ class WordFinder:
                                 candidate_stats = self.normalized_stats[cand]
                                 stats_score = self._stats_similarity(query_stats, candidate_stats)
 
-                            combined_score = 0.6 * ngram_score + 0.4 * stats_score
+                            combined_score = 0.5 * ngram_score + 0.5 * stats_score
 
                             if combined_score > best_score:
                                 best_score = combined_score
@@ -318,6 +321,24 @@ class WordFinder:
         if norm_a == 0 or norm_b == 0:
             return 0.0
         return dot_product / (norm_a * norm_b)
+        
+    def _is_potential_keyword(self, query: str) -> bool:
+        """Filtro súper rápido: intersección de n-gramas"""
+        global_filter = self.model.get("global_filter", {})
+        if not global_filter:
+            return True
+        
+        global_ngrams = global_filter.get("global_ngrams", set())
+        if not global_ngrams:
+            return True
+        
+        # Generar n-gramas del query
+        query_ngrams = set()
+        for n in range(self.n_min, self.n_max + 1):
+            query_ngrams.update(self._ngrams(query, n))
+        
+        # Si hay intersección, es potencial keyword
+        return bool(query_ngrams & global_ngrams)
 
     def get_model_info(self) -> Dict[str, Any]:
         return{
