@@ -2,6 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from scripts.generate_model import ModelGenerator
+from cache_service import  cleanup_project_cache
 
 def configure_logging():
     level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -31,9 +32,10 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
     CONFIG_FILE = os.path.join(PROJECT_ROOT, "data", "config.yaml")
+    cleanup_project_cache(PROJECT_ROOT)
     try:
         generator = ModelGenerator(CONFIG_FILE, PROJECT_ROOT)
         generator.generate_model()
         logger.info("Proceso terminado correctamente.")
-    except Exception:
-        logger.exception("Error en el proceso de generación del modelo.")
+    except Exception as e:
+        logger.error("Error en el proceso de generación del modelo: {e}", exc_info=True)
