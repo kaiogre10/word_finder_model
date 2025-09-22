@@ -5,9 +5,8 @@ import logging
 import pickle
 import unicodedata
 import yaml
-from scipy.sparse import csc_matrix
 from typing import List, Dict, Any, Tuple
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 logger = logging.getLogger(__name__)
 
 class ModelGenerator:
@@ -40,72 +39,82 @@ class ModelGenerator:
         std_dev = variance ** 0.5
         return {"char_count": char_count, "mean": mean_val, "variance": variance, "std_dev": std_dev}
         
-    def _train_all_vectorizers(self, key_words: Dict[str, list[str]], global_words: List[str]) -> Tuple[Dict[str, TfidfVectorizer], Dict[str, Any]]:
-        """Entrena vectorizers por field + filtro global en una sola pasada"""
+    def _train_all_vectorizers(self, key_words: Dict[str, list[str]], global_words: List[str]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Entrena CountVectorizer + TfidfTransformer por field y filtro global."""
         all_vectorizers = {}
-        
-        # 1. Vectorizers por field
+
+        # 1. Vectorizers por field (CountVectorizer + TfidfTransformer)
         for field, variants in key_words.items():
             if not variants:
                 continue
             if isinstance(variants, str):
                 variants = [variants]
-            
+
             variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
             variants_normalized = [s for s in variants_normalized if s]
-            
-            if variants_normalized:
-                # Vocabulario del field
-                vocabulary = set()
-                for variant in variants_normalized:
-                    for n in range(self.ngr[0], self.ngr[1] + 1):
-                        vocabulary.update(self._ngrams(variant, n))
-                
-                vectorizer = TfidfVectorizer(
-                    strip_accents="ascii",
-                    # preprocessor=lambda x: x,
-                    ngram_range=(self.ngr[0], self.ngr[1]),
-                    analyzer="char_wb",
-                    use_idf=True,
-                    vocabulary=list(vocabulary),
-                    norm="l2"
-                )
-                X = vectorizer.fit_transform(variants_normalized)
-                all_vectorizers[field] = vectorizer
-                vectorizer.get_feature_names_out()
-                np.array(variants_normalized)
-                logger.info(f"Vectorizador por campo: {X.shape}")
-        
-        # 2. Filtro global (usando todos los n-gramas)
+            if not variants_normalized:
+                continue
+
+            # construir vocabulario de n-gramas por field
+            vocabulary = set()
+            for variant in variants_normalized:
+                for n in range(self.ngr[0], self.ngr[1] + 1):
+                    vocabulary.update(self._ngrams(variant, n))
+            if not vocabulary:
+                continue
+
+            # CountVectorizer con vocab fijo (genera matriz de conteos)
+            counter = CountVectorizer(
+                strip_accents="ascii",
+                ngram_range=(self.ngr[0], self.ngr[1]),
+                analyzer="char_wb",
+                vocabulary=list(vocabulary),
+            )
+            X_counts = counter.transform(variants_normalized)
+
+            # TfidfTransformer ajustado sobre los conteos.
+            # use_idf=False produce TF normalizado; cambiar a True si tienes corpus amplio.
+            tfidf_tr = TfidfTransformer(norm="l2", use_idf=True, smooth_idf=True, sublinear_tf=True)
+            X_tfidf = tfidf_tr.fit_transform(X_counts)
+
+            all_vectorizers[field] = {
+                "counter": counter,
+                "tfidf": tfidf_tr,
+                "tfidf_vectors": X_tfidf,
+                "variants": variants_normalized,
+            }
+            logger.info(
+                f"Vectorizador por campo '{field}': counts={X_counts.shape}, tfidf_vectors={X_tfidf.shape}"
+            )
+
+        # 2. Filtro global (extraer idf/weights si se desea)
         global_vocab = set()
         for word in global_words:
             for n in range(self.ngr[0], self.ngr[1] + 1):
                 global_vocab.update(self._ngrams(word, n))
-        
-        global_vectorizer = TfidfVectorizer(
-            strip_accents="ascii",
-            ngram_range=(self.ngr[0], self.ngr[1]),
-            analyzer="char_wb",
-            use_idf=True,
-            vocabulary=list(global_vocab),
-            norm="l2"
-        )
-        X = global_vectorizer.fit_transform(global_words)
-        global_vectorizer.get_feature_names_out()
-        np.array(global_words)
-        logger.info(f"Vectorizador Global: {X.shape}")
-        
-        # Extraer pesos del filtro
-        ngram_weights = {
-            ngram: global_vectorizer.idf_[idx] 
-            for ngram, idx in global_vectorizer.vocabulary_.items()
-        }
-        
-        global_filter = {
-            "ngram_weights": ngram_weights,
-            "char_ngram_range": [self.ngr[0], self.ngr[1]]
-        }
-        
+
+        if global_vocab:
+            global_counter = CountVectorizer(
+                strip_accents="ascii",
+                ngram_range=(self.ngr[0], self.ngr[1]),
+                analyzer="char_wb",
+                vocabulary=list(global_vocab),
+            )
+            Xg_counts = global_counter.transform(global_words)
+            logger.info("Global counts shape: %s (n_docs=%d, n_features=%d)", Xg_counts.shape, Xg_counts.shape[0], Xg_counts.shape[1])
+
+            # ajustar TF-IDF sobre esos conteos (no modifica Xg_counts)
+            global_tfidf = TfidfTransformer(norm="l2", use_idf=True, smooth_idf=True, sublinear_tf=False)
+            global_tfidf.fit(Xg_counts)
+
+            # loguear información relevante del tfidf
+            logger.info("Global TF-IDF fitted: idf_ shape=%s, sample idf[:5]=%s", global_tfidf.idf_.shape, global_tfidf.idf_[:5])
+
+            ngram_weights = {ngram: global_tfidf.idf_[idx] for ngram, idx in global_counter.vocabulary_.items()}
+        else:
+            ngram_weights = {}
+
+        global_filter = {"ngram_weights": ngram_weights, "char_ngram_range": [self.ngr[0], self.ngr[1]]}
         return all_vectorizers, global_filter
             
     def generate_model(self) -> Dict[str, Any]:
