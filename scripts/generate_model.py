@@ -118,7 +118,7 @@ class ModelGenerator:
         
         global_filter = {
             "ngram_weights": ngram_weights,
-            "global_ngrams": global_ngrams,  # ← Para filtro rápido
+            "global_ngrams": global_ngrams,
             "char_ngram_range": [self.ngr[0], self.ngr[1]]
         }
         
