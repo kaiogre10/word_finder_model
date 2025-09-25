@@ -8,7 +8,7 @@ def configure_logging():
     level_name = os.environ.get("DEBUG", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
 
-    fmt = logging.Formatter("%(levelname)s %(name)s: %(message)s")
+    fmt = logging.Formatter("%(filename)s:%(lineno)d %(name)s: %(message)s")
 
     root = logging.getLogger()
     # evitar añadir handlers duplicados si se llama varias veces

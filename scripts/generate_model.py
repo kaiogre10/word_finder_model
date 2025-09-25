@@ -23,7 +23,8 @@ class ModelGenerator:
         s = s.strip().lower()
         s = unicodedata.normalize("NFKD", s)
         s = "".join(ch for ch in s if not unicodedata.combining(ch))
-        s = re.sub(r"[^a-zA-Z0-9]", "", s)
+        s = re.sub(r"[^a-zA-Z0-9\s]", "", s)
+        # s = re.sub(r"[^a-zA-Z0-9]", "", s)
         return s
 
     def _ngrams(self, s: str, n: int) -> List[str]:
@@ -84,9 +85,6 @@ class ModelGenerator:
                 global_words.append(s)
                 variant_to_field[s] = field
                 
-            variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
-            variants_normalized = [s for s in variants_normalized if s]
-
         all_vectorizers, global_filter = self._train.train_all_vectorizers(key_words, global_words)
                                                 
         grams_index: List[Dict[str, Any]] = []
@@ -113,7 +111,7 @@ class ModelGenerator:
             "global_filter": global_filter,
             "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
-            "key_words": global_words,
+            "global_words": global_words,
             "grams_index": grams_index,
             }
 
@@ -131,6 +129,3 @@ class ModelGenerator:
         except AttributeError as e:
             logger.info(f"Error costruyendo Modelo: {e}", exc_info=True)
         
-# if __name__ == "__main__":
-#     generator = ModelGenerator("data/config.yaml", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-#     generator.generate_model(config_dict)

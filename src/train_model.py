@@ -14,7 +14,7 @@ class TrainModel:
         self.config = config
         self.params = config.get("params", {})
         
-    def train_all_vectorizers(self, key_words: Dict[str, List[Dict[str, str]]], global_words: List[str]) -> Dict[str, Any]:
+    def train_all_vectorizers(self, key_words: Dict[str, List[str]], global_words: List[str]) -> Dict[str, Any]:
         self.ngr: Tuple[int, int]  = self.params.get("char_ngram_range", [])
         self.gngr: Tuple[int, int] = self.params.get("char_ngram_global", [])
         self.top_ngrams = self.params.get("top_ngrams", [])
@@ -22,62 +22,47 @@ class TrainModel:
         self.key_words = key_words
         self.global_words = global_words
 
-        variants_normalized = self._normalize_words(key_words)
-        all_vectorizers = self._train_tfidftransformer(key_words, variants_normalized)
+        all_vectorizers = self._train_tfidftransformer(key_words)
         global_filter = self._train_global(global_words)
-        all_maps = self._train_map_vectorizar(key_words, variants_normalized)
+        all_maps = self._train_map_vectorizar(key_words)
 
         return all_vectorizers, global_filter
 
-    def _normalize_words(self, key_words: Dict[str, List[Dict[str, str]]]) -> List[str]:
-        try:
-            for variants in key_words.items():
-                if not variants:
-                    continue
-
-                variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
-                variants_normalized = [s for s in variants_normalized if s]
-                        
-                # if variants_normalized:
-                #     vocabulary: Set[List[str]] = set()
-                #     for variant in variants_normalized:
-                #         for n in range(self.ngr[0], self.ngr[1] + 1):
-                #             vocabulary.update(self._ngrams(variant, n))
-
-            return variants_normalized
-                
-        except Exception as e:
-            logger.error(f"Error entrenando tramsformer: {e}", exc_info=True)
-                    
-    def  _train_tfidftransformer(self, key_words: Dict[str, List[Dict[str, str]]], variants_normalized: List[str]) -> Dict[str, Any]:
+    def _train_tfidftransformer(self, key_words: Dict[str, List[str]]) -> Dict[str, Any]:
         try:
             all_vectorizers = {}
             for field, variants in key_words.items():
                 if not variants:
                     continue
             
-                if variants_normalized:
-                    vocabulary: Set[List[str]] = set()
-                    for variant in variants_normalized:
+                field_variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
+                field_variants_normalized = [s for s in field_variants_normalized if s]
+
+                if field_variants_normalized:
+                    vocabulary: Set[str] = set()
+                    for variant in field_variants_normalized:
                         for n in range(self.ngr[0], self.ngr[1] + 1):
                             vocabulary.update(self._ngrams(variant, n))
+
+                    if not vocabulary:
+                        continue
 
                     counter = CountVectorizer(
                         strip_accents="ascii",
                         ngram_range=(self.ngr[0], self.ngr[1]),
                         analyzer="char_wb",
-                        binary=True,
+                        binary=False,
                         vocabulary=list(vocabulary),
                     )
                     
                     tfidf_tr = TfidfTransformer(
-                        norm="l2", 
-                        use_idf=True, 
+                        norm="l1", 
+                        use_idf=True,
                         smooth_idf=True, 
                         sublinear_tf=False
                     )
 
-                    X_counts = counter.fit_transform(variants_normalized)
+                    X_counts = counter.fit_transform(field_variants_normalized)
                     X_tfidf = tfidf_tr.fit_transform(X_counts)
                     N_tfidf = np.array(X_tfidf.shape)
 
@@ -97,9 +82,9 @@ class TrainModel:
                         "n_features": N_tfidf[1],
                     }
 
-                # logger.info(f"N_features: {N_tfidf[1]}")
-        # logger.debug(f"Features puros completos: {np.array(X_tfidf.size)}")
-        # logger.debug(f"Features fusionados completos: {np.array(X_counts.shape)}")
+            # logger.info(f"N_features: {N_tfidf[1]}")
+            # logger.debug(f"Features puros completos: {np.array(X_tfidf.size)}")
+            # logger.debug(f"Features fusionados completos: {np.array(X_counts.shape)}")
             logger.info("TRANSFORMER generado")
             return all_vectorizers
         
@@ -108,7 +93,6 @@ class TrainModel:
             return {}
     
     def _train_global(self, global_words: List[str]) -> Dict[str, Any]:
-
         NP_MODE: str = "shape"
         def nparray(array, mode=NP_MODE) -> str:
             if mode == "shape":
@@ -134,7 +118,8 @@ class TrainModel:
                     ngram_range=(self.gngr[0], self.gngr[1]),
                     analyzer="char_wb",
                     binary=True,
-                    vocabulary=list(global_vocab)
+                    vocabulary=list(global_vocab),
+                    dtype=np.float32
                 )
                 Xg_counts: np.ndarray[Any, np.float32] = global_counter.fit_transform(global_words).astype(np.float32)
 
@@ -145,16 +130,15 @@ class TrainModel:
                 }
                 sorted_ngrams: List[Tuple[str, float]] = sorted(ngram_freqs.items(), key=lambda x: x[1], reverse=True)        
                 top_grams = int(len(sorted_ngrams)/(self.top_ngrams_fraction))
-                logger.debug(f"TOP GLOBAL  {top_grams}")
+                logger.debug(f"TOP GLOBAL {sorted_ngrams}")
+
                 global_ngrams: List[Tuple[str, float]] = sorted_ngrams[:top_grams]
                 
                 logger.debug(f"Frecuencias globales ordenadas: {sorted_ngrams}")
 
                 W = np.array(sorted_ngrams)
-                logger.debug(f"Sorted GLOBAL: {nparray(W)}")
-
                 Z = np.array(global_ngrams)
-                logger.debug(f"TOP GLOBAL array: {nparray(Z)}")
+                logger.info(f"TOP GLOBAL: {nparray(Z)}, SORTED GLOBAL: {nparray(W)}")
                 logger.debug(f"TOP GLOBAL: {global_ngrams}")
 
                 global_filter: Dict[str, Any] = {
@@ -169,18 +153,24 @@ class TrainModel:
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
 
-    def _train_map_vectorizar(self, key_words: Dict[str, List[Dict[str, str]]], variants_normalized: List[str]) -> Dict[str, Any]:
+    def _train_map_vectorizar(self, key_words: Dict[str, List[str]]) -> Dict[str, Any]:
         try:
             all_mappers = {}
             for field, variants in key_words.items():
                 if not variants:
                     continue
 
-                if variants_normalized:
-                    vocabulary: Set[List[str]] = set()
-                    for variant in variants_normalized:
+                field_variants_normalized = [self._normalize(v) for v in variants if isinstance(v, str)]
+                field_variants_normalized = [s for s in field_variants_normalized if s]
+
+                if field_variants_normalized:
+                    vocabulary: Set[str] = set()
+                    for variant in field_variants_normalized:
                         for n in range(self.ngr[0], self.ngr[1] + 1):
                             vocabulary.update(self._ngrams(variant, n))
+
+                    if not vocabulary:
+                        continue
 
                     counter_map = CountVectorizer(
                         strip_accents="ascii",
@@ -191,21 +181,15 @@ class TrainModel:
                     )
                     
                     tfidf_map = TfidfTransformer(
-                        norm="l2", 
+                        norm="l1", 
                         use_idf=False, 
                         smooth_idf=True, 
                         sublinear_tf=False
                     )
 
-                    map_counts = counter_map.fit_transform(variants_normalized)
+                    map_counts = counter_map.fit_transform(field_variants_normalized)
                     X_tfidfmap = tfidf_map.fit_transform(map_counts)
                     N_tfidfmap = np.array(X_tfidfmap.shape)
-
-                    # logger.info(f" Numero de features: {N_tfidf[1]}")
-                    
-                    # lengths = np.array([[len(w)] for w in variants_normalized])
-
-                    # X_features = sparse.hstack([X_tfidf, lengths])
 
                     logger.info(f"MAPPER: '{field}', features: {np.array(X_tfidfmap.shape)}")
                     # logger.info(f"Features fusionados: {np.array(X_tfidf.shape)}")
@@ -231,7 +215,8 @@ class TrainModel:
         s = s.strip().lower()
         s = unicodedata.normalize("NFKD", s)
         s = "".join(ch for ch in s if not unicodedata.combining(ch))
-        s = re.sub(r"[^a-zA-Z0-9]", "", s)
+        s = re.sub(r"[^a-zA-Z0-9\s]", "", s)
+        # s = re.sub(r"[^a-zA-Z0-9]", "", s)
         return s
     
     def _ngrams(self, s: str, n: int) -> List[str]:

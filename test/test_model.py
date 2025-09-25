@@ -8,7 +8,10 @@ import time
 import json
 import glob
 
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(levelname)s %(filename)s:%(lineno)d %(message)s'
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,16 @@ base_queries: List[str] = [
     "preciounitario", "cantidadbar", "serviciolorem", "detalletest",
     "code"
 ]
+base_queries2: List[str] = [
+    "ticket razon", "precio cantidad", "detalle concepto", "referencia producto",
+    "servicio precio", "subtotal hora", "cantidad sku", "importe modelo",
+    "total servicio", "fecha descripcion", "articulo folio", "marca concepto",
+    "iva articulo", "razon social ticket", "precio unitario codigo", "ticket xyz",
+    "total xpto", "fecha cliente abc", "importe test", "sku", "modelo prueba",
+    "precio unitario", "cantidad bar", "servicio lorem", "detalle test",
+    "code"
+]
+
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -61,18 +74,15 @@ def replace_char(s: str) -> str:
     i = random.randrange(len(s))
     return s[:i] + random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+-=[]{}|;':\",./<>?`~áéíóúàèìòùâêîôûäëïöüñçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÄËÏÖÜÑÇ") + s[i+1:]
 
-def remove_spaces(s: str) -> str:
-    return s.replace(" ", "")
-
 def perturb(s: str) -> str:
-    ops = [delete_char, swap_chars, replace_char, remove_spaces]
+    ops = [delete_char, swap_chars, replace_char]
     f = random.choice(ops)
     return f(s)
 
 # Generar queries con ruido
 random.seed(42)
 text: List[str] = []
-for q in base_queries:
+for q in base_queries and base_queries2:
     text.append(q)
     for _ in range(3):
         text.append(perturb(q))
@@ -80,7 +90,7 @@ for q in base_queries:
 def log_model_summary(wf: WordFinder):
     try:
         logger.info("Resumen del modelo WordFinder")
-        logger.info(f"Total de palabras clave: {len(wf.key_words)}")
+        logger.info(f"Total de palabras clave: {len(wf.global_words)}")
         logger.info(f"Rango de n-gramas: {wf.ngr}")
         logger.info(f"Umbral de similitud: {wf.threshold}")
     except Exception as e:
@@ -98,7 +108,7 @@ def log_search_results(res: Optional[List[Dict[str, Any]]], q: List[str], params
     except Exception as e:
         logger.info(f"Error en log: {e}", exc_info=True)
 
-def run_queries(text: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True):
+def run_queries(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True):
     num_matches = 0
     num_no_matches = 0
     matches: List[Tuple[str, Dict[str, Any]]] = []
@@ -107,13 +117,9 @@ def run_queries(text: List[str], wf: WordFinder, show_no_match: bool = True, sho
 
     time0 = time.perf_counter()
     try:
-        for q in text:
+        for q in base_queries2:
             res: Optional[List[Dict[str, Any]]] = wf.find_keywords(q)
             used = wf._active
-            # if not res and "standard" in wf.available_models() and wf._active != "standard":
-            #     used = "standard"
-            #     wf.set_active_model("standard")
-            #     res = wf.find_keywords(q)
             if res:
                 num_matches += 1
                 for r in (res if isinstance(res, list) else [res]):
@@ -130,16 +136,55 @@ def run_queries(text: List[str], wf: WordFinder, show_no_match: bool = True, sho
                 num_no_matches += 1
                 no_matches.append(q)
                 if show_no_match:
-                    logger.info(f"No match para: '{q}'")
+                    logger.info(f"QUERIES1: No match para: '{q}'")
+    except Exception as e:
+        logger.error(f"Error en RUN QUERIES1: : {e}", exc_info=True)
+
+    porcentaje: float = (100.00/len(base_queries)) * num_matches
+    logger.info(f"QUERIES1: Resumen final: {num_matches}/{len(base_queries)} matches")
+    logger.info(f"QUERIES1: Porcentaje de coincidencia de palabras: {porcentaje:.2f}%")
+    logger.info(f"QUERIES1: Total dudosos: {len(dudosos)}")
+    logger.info(f"QUERIES1: Total sin match: {num_no_matches}")
+    logger.info(f"QUERIES1: Tiempo total: {time.perf_counter()-time0:.2f}s")
+
+def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True):
+    num_matches = 0
+    num_no_matches = 0
+    matches: List[Tuple[str, Dict[str, Any]]] = []
+    no_matches: List[str] = []
+    dudosos: List[Tuple[str, Dict[str, Any]]] = []
+
+    time0 = time.perf_counter()
+    try:
+        for q in base_queries2:
+            res: Optional[List[Dict[str, Any]]] = wf.find_keywords(q)
+            used = wf._active
+            if res:
+                num_matches += 1
+                for r in (res if isinstance(res, list) else [res]):
+                    key_field = r.get("key_field")
+                    params = r.get("params")
+                    word_found = r.get("word_found")
+                    score = r.get("similarity")
+                    matches.append((q, r))
+                    thr = wf._len_threshold(len(word_found))
+                    if show_dudosos and (score < thr + 0.05 and score > thr - 0.05):
+                        dudosos.append((q, r))
+                log_search_results(res, q, params)
+            else:
+                num_no_matches += 1
+                no_matches.append(q)
+                if show_no_match:
+                    logger.info(f"No match QUERIES2: '{q}'")
     except Exception as e:
         logger.error(f"Error en RUN QUERIES: {e}", exc_info=True)
 
-    porcentaje: float = (100.00/len(text)) * num_matches
-    logger.info(f"Resumen final: {num_matches}/{len(text)} matches")
-    logger.info(f"Porcentaje de coincidencia de palabras: {porcentaje:.2f}%")
-    logger.info(f"Total dudosos: {len(dudosos)}")
-    logger.info(f"Total sin match: {num_no_matches}")
-    logger.info(f"Tiempo total: {time.perf_counter()-time0:.2f}s")
+    porcentaje: float = (100.00/len(base_queries2)) * num_matches
+    logger.info(f"QUERIES2: Resumen final: {num_matches}/{len(base_queries2)}matches")
+    logger.info(f"QUERIES2: Porcentaje de coincidencia de palabras: {porcentaje:.2f}%")
+    logger.info(f"QUERIES2: Total dudosos: {len(dudosos)}")
+    logger.info(f"QUERIES2: Total sin match: {num_no_matches}")
+    logger.info(f"QUERIES: Tiempo total: {time.perf_counter()-time0:.2f}s")
 
 def _test_json(wf: WordFinder, DATA_FOLDER: str,):
     time0 = time.perf_counter()
@@ -167,10 +212,13 @@ def _test_json(wf: WordFinder, DATA_FOLDER: str,):
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
-    wf = WordFinder(MODEL_STD, PROJECT_ROOT) 
+    wf = WordFinder(MODEL_STD, PROJECT_ROOT)
     log_model_summary(wf)
     # _test_json(wf, DATA_FOLDER)
-    run_queries(text, wf)
+    logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+    run_queries(base_queries, wf)
+    logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
+    run_queries2(base_queries2, wf)
 
     # # Prueba con diferentes inputs
     # text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]

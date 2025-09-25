@@ -41,15 +41,15 @@ class WordFinder:
 
     def _apply_active_model(self):
         params: Dict[str, Any] = self.model.get("params", {})
-        self.key_words = self.model.get("key_words", {})
+        self.global_words = self.model.get("global_words", {})
         self.global_filter: Dict[str, Any] = self.model.get("global_filter", {})
-        self.gngr: Tuple[int, int] = params.get("char_ngram_global", [3,4])
-        self.ngr: Tuple[int, int] = params.get("char_ngram_range", [2,4])
-        self.threshold = params.get("threshold_similarity", 0.90)
+        self.gngr: Tuple[int, int] = params.get("char_ngram_global", [])
+        self.ngr: Tuple[int, int] = params.get("char_ngram_range", [])
+        self.threshold = params.get("threshold_similarity", [])
         self.thresholds_by_len: List[Tuple[int, int, float]] = [tuple(item) for item in params.get("thresholds_by_len", [])]
         self.weights_by_n: List[Tuple[int, int, float]] = [tuple(item) for item in params.get("weights_by_n", [])]
         self.window_flex = params.get("window_flexibility", 3)
-        self.global_filter_threshold = float(params.get("global_filter_threshold", 0.20))
+        self.global_filter_threshold = float(params.get("global_filter_threshold", []))
         self.grams_index = self.model.get("self.grams_index", {})
         raw_global = self.global_filter.get("global_ngrams", [])
         # posibilidad de que el trainer haya incluido un dict de frecuencias y el counter
@@ -92,7 +92,7 @@ class WordFinder:
         else:
             self.grams = []
             self.lengths: List[int]  = []
-            for w in self.key_words:
+            for w in self.global_words:
                 self.length = len(w)
                 self.lengths.append(self.length)
                 self.gmap_sets: Dict[int, set[str]] = {}
@@ -117,9 +117,12 @@ class WordFinder:
         except Exception as e:
             logger.error(f"error calculando umrales de largo: {e}", exc_info=True)
 
-    def find_keywords(self, text: List[str] | str) -> Optional[List[Dict[str, Any]]]:
+    def find_keywords(self, text: List[str] | str, threshold: Optional[float] = None) -> Optional[List[Dict[str, Any]]]:
         """Busca todas las palabras clave presentes en el string, no solo la mejor."""
         try:
+            # Usar el threshold proporcionado o el del modelo como filtro final
+            final_threshold = threshold if threshold is not None else self.threshold
+            
             single = False
             if isinstance(text, str):
                 text = [text]
@@ -134,11 +137,9 @@ class WordFinder:
                 if not self._is_potential_keyword(q):
                     continue
 
-                for i in range(len(self.key_words)):
-                    cand = self.key_words[i]
-                    # normalizamos la variante del modelo para comparar correctamente
-                    cand_norm = self._normalize(cand)
-                    cand_len = len(cand_norm)
+                for i in range(len(self.global_words)):
+                    cand = self.global_words[i]
+                    cand_len = len(cand)
                     min_w = max(1, cand_len - self.window_flex)
                     if min_w > len(q):
                         continue
@@ -152,12 +153,13 @@ class WordFinder:
                                 sub = q[j:j + w]
                                 grams_sub = self._build_query_grams(sub)
                                 # Solo asignar similitud perfecta si es la misma palabra completa (misma longitud)
-                                if sub == cand_norm and len(sub) == cand_len:
+                                if sub == cand and len(sub) == cand_len:
                                     ngram_score: float = 1.0
                                 else:
                                     ngram_score: float = self._score_binary_cosine_multi_n(grams_cand, grams_sub)
-                                thr: float = self._len_threshold(len(cand))
-                                if ngram_score >= thr:
+                                
+                                # FILTRO FINAL: usar threshold_similarity como filtro definitivo
+                                if ngram_score >= final_threshold:
                                     key_field = self.variant_to_field.get(cand)
                                     results.append({
                                         "key_field": key_field,
@@ -183,7 +185,8 @@ class WordFinder:
         s = s.strip().lower()
         s = unicodedata.normalize("NFKD", s)
         s = "".join(ch for ch in s if not unicodedata.combining(ch))
-        s = re.sub(r"[^a-zA-Z0-9\s]", "", s) 
+        s = re.sub(r"[^a-zA-Z0-9\s]", "", s)
+        # s = re.sub(r"[^a-zA-Z0-9]", "", s)
         return s
 
     def _build_query_grams(self, q: str) -> Dict[int, set[str]]:
@@ -284,7 +287,7 @@ class WordFinder:
 
     def get_model_info(self) -> Dict[str, Any]:
         return{
-        "total_words": len(self.key_words),
+        "total_words": len(self.global_words),
         "threshold_similarity": self.threshold,
         "char_ngram_range": self.ngr,
         "weights_by_n": self.weights_by_n
