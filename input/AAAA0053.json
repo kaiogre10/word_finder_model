@@ -1,0 +1,439 @@
+{
+    "line_0000": {
+        "line_bbox": [
+            162.0,
+            323.0,
+            199.0,
+            351.0
+        ],
+        "line_centroid": [
+            180.5,
+            337.0
+        ],
+        "polygon_ids": [
+            "poly_0046"
+        ],
+        "text": "*:"
+    },
+    "line_0001": {
+        "line_bbox": [
+            166.0,
+            348.0,
+            241.0,
+            415.0
+        ],
+        "line_centroid": [
+            203.5,
+            381.5
+        ],
+        "polygon_ids": [
+            "poly_0045"
+        ],
+        "text": "H"
+    },
+    "line_0002": {
+        "line_bbox": [
+            502.0,
+            794.0,
+            1316.0,
+            865.0
+        ],
+        "line_centroid": [
+            909.0,
+            829.5
+        ],
+        "polygon_ids": [
+            "poly_0044"
+        ],
+        "text": "PAPELERIA EL ESTUDIANTE"
+    },
+    "line_0003": {
+        "line_bbox": [
+            217.0,
+            880.0,
+            1634.0,
+            954.0
+        ],
+        "line_centroid": [
+            925.5,
+            917.0
+        ],
+        "polygon_ids": [
+            "poly_0043"
+        ],
+        "text": "FEDERICO GOMEZ 6 ZUMPANGO EDO MEX CP5560"
+    },
+    "line_0004": {
+        "line_bbox": [
+            293.0,
+            963.0,
+            1530.0,
+            1040.0
+        ],
+        "line_centroid": [
+            911.5,
+            1001.5
+        ],
+        "polygon_ids": [
+            "poly_0042"
+        ],
+        "text": "EDITH ROMERO LUNA RFC ROLE511112644"
+    },
+    "line_0005": {
+        "line_bbox": [
+            428.0,
+            1049.0,
+            1417.0,
+            1123.0
+        ],
+        "line_centroid": [
+            922.5,
+            1086.0
+        ],
+        "polygon_ids": [
+            "poly_0041"
+        ],
+        "text": "REGIMEN INCORPORACION FISCAL"
+    },
+    "line_0006": {
+        "line_bbox": [
+            287.0,
+            1135.0,
+            1527.0,
+            1206.0
+        ],
+        "line_centroid": [
+            907.0,
+            1170.5
+        ],
+        "polygon_ids": [
+            "poly_0040"
+        ],
+        "text": "SU SOLUCION EN PAPELERIA DE MAYOREO"
+    },
+    "line_0007": {
+        "line_bbox": [
+            1111.0,
+            1225.0,
+            1781.0,
+            1292.0
+        ],
+        "line_centroid": [
+            1446.0,
+            1258.5
+        ],
+        "polygon_ids": [
+            "poly_0039"
+        ],
+        "text": "10/04/2024 12:48 PM"
+    },
+    "line_0008": {
+        "line_bbox": [
+            676.0,
+            1301.0,
+            1178.0,
+            1379.0
+        ],
+        "line_centroid": [
+            927.0,
+            1340.0
+        ],
+        "polygon_ids": [
+            "poly_0038"
+        ],
+        "text": "NOTAS DE VENTA"
+    },
+    "line_0009": {
+        "line_bbox": [
+            67.0,
+            1379.0,
+            254.0,
+            1459.0
+        ],
+        "line_centroid": [
+            160.5,
+            1419.0
+        ],
+        "polygon_ids": [
+            "poly_0037"
+        ],
+        "text": "A1251"
+    },
+    "line_0010": {
+        "line_bbox": [
+            67.0,
+            1475.5,
+            1787.0,
+            1554.0
+        ],
+        "line_centroid": [
+            927.0,
+            1514.75
+        ],
+        "polygon_ids": [
+            "poly_0036",
+            "poly_0035"
+        ],
+        "text": "CAJERO: NM"
+    },
+    "line_0011": {
+        "line_bbox": [
+            73.0,
+            1558.0,
+            1788.0,
+            1639.0
+        ],
+        "line_centroid": [
+            930.5,
+            1598.5
+        ],
+        "polygon_ids": [
+            "poly_0034",
+            "poly_0033"
+        ],
+        "text": "TICKET NO: 2266"
+    },
+    "line_0012": {
+        "line_bbox": [
+            70.0,
+            1648.0,
+            1744.0,
+            1722.0
+        ],
+        "line_centroid": [
+            907.0,
+            1685.0
+        ],
+        "polygon_ids": [
+            "poly_0032",
+            "poly_0031",
+            "poly_0030"
+        ],
+        "text": "CANT. DESCRIPCION PRECIO IMPORTE"
+    },
+    "line_0013": {
+        "line_bbox": [
+            67.0,
+            1810.0,
+            1744.0,
+            1890.3333333333333
+        ],
+        "line_centroid": [
+            905.5,
+            1850.1666666666665
+        ],
+        "polygon_ids": [
+            "poly_0029",
+            "poly_0028",
+            "poly_0027"
+        ],
+        "text": "1  PP FINO CUER AMA NGO C/ $44.40 $44.40"
+    },
+    "line_0014": {
+        "line_bbox": [
+            278.0,
+            1892.0,
+            364.0,
+            1972.0
+        ],
+        "line_centroid": [
+            321.0,
+            1932.0
+        ],
+        "polygon_ids": [
+            "poly_0026"
+        ],
+        "text": "12"
+    },
+    "line_0015": {
+        "line_bbox": [
+            67.0,
+            1982.6666666666667,
+            1744.0,
+            2062.0
+        ],
+        "line_centroid": [
+            905.5,
+            2022.3333333333335
+        ],
+        "polygon_ids": [
+            "poly_0025",
+            "poly_0024",
+            "poly_0023"
+        ],
+        "text": "1zi PP MED RJ C/12 $41.40 $41.40"
+    },
+    "line_0016": {
+        "line_bbox": [
+            141.0,
+            2069.0,
+            1713.0,
+            2145.0
+        ],
+        "line_centroid": [
+            927.0,
+            2107.0
+        ],
+        "polygon_ids": [
+            "poly_0022",
+            "poly_0021",
+            "poly_0020"
+        ],
+        "text": "-BLOCK SOLICITUD EMPLEO $42.60 $42.60"
+    },
+    "line_0017": {
+        "line_bbox": [
+            278.0,
+            2151.0,
+            679.0,
+            2225.0
+        ],
+        "line_centroid": [
+            478.5,
+            2188.0
+        ],
+        "polygon_ids": [
+            "poly_0019"
+        ],
+        "text": "CTA 25H C/3"
+    },
+    "line_0018": {
+        "line_bbox": [
+            266.0,
+            2243.0,
+            1741.0,
+            2316.0
+        ],
+        "line_centroid": [
+            1003.5,
+            2279.5
+        ],
+        "polygon_ids": [
+            "poly_0018",
+            "poly_0017",
+            "poly_0016"
+        ],
+        "text": "DIXON 21G C/4 $69.93 $69.93"
+    },
+    "line_0019": {
+        "line_bbox": [
+            223.0,
+            2328.5,
+            1744.0,
+            2396.25
+        ],
+        "line_centroid": [
+            983.5,
+            2362.375
+        ],
+        "polygon_ids": [
+            "poly_0014",
+            "poly_0015",
+            "poly_0012",
+            "poly_0013"
+        ],
+        "text": "BLOCK ALBANENE CTA 90/9 $79.80 $39.90"
+    },
+    "line_0020": {
+        "line_bbox": [
+            272.0,
+            2406.0,
+            465.0,
+            2483.0
+        ],
+        "line_centroid": [
+            368.5,
+            2444.5
+        ],
+        "polygon_ids": [
+            "poly_0011"
+        ],
+        "text": "5 25H"
+    },
+    "line_0021": {
+        "line_bbox": [
+            272.0,
+            2495.3333333333335,
+            1738.0,
+            2571.3333333333335
+        ],
+        "line_centroid": [
+            1005.0,
+            2533.3333333333335
+        ],
+        "polygon_ids": [
+            "poly_0010",
+            "poly_0009",
+            "poly_0008"
+        ],
+        "text": "CREPE NAR C/10 $49.80 $49.80"
+    },
+    "line_0022": {
+        "line_bbox": [
+            272.0,
+            2581.6666666666665,
+            1738.0,
+            2653.6666666666665
+        ],
+        "line_centroid": [
+            1005.0,
+            2617.6666666666665
+        ],
+        "polygon_ids": [
+            "poly_0007",
+            "poly_0006",
+            "poly_0005"
+        ],
+        "text": "CREPE RS MEX C/10 $49.80 $49.80"
+    },
+    "line_0023": {
+        "line_bbox": [
+            135.0,
+            2664.0,
+            1707.0,
+            2741.0
+        ],
+        "line_centroid": [
+            921.0,
+            2702.5
+        ],
+        "polygon_ids": [
+            "poly_0004",
+            "poly_0003",
+            "poly_0002"
+        ],
+        "text": "LAPIZ MAPED TRIANG CJA $47.40 $47.40"
+    },
+    "line_0024": {
+        "line_bbox": [
+            269.0,
+            2736.0,
+            434.0,
+            2828.0
+        ],
+        "line_centroid": [
+            351.5,
+            2782.0
+        ],
+        "polygon_ids": [
+            "poly_0001"
+        ],
+        "text": "C/12"
+    },
+    "line_0025": {
+        "line_bbox": [
+            560.0,
+            2831.0,
+            1243.0,
+            2914.0
+        ],
+        "line_centroid": [
+            901.5,
+            2872.5
+        ],
+        "polygon_ids": [
+            "poly_0000"
+        ],
+        "text": "NO. DE ARTICULOS: 9"
+    }
+}

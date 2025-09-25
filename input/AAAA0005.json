@@ -1,0 +1,402 @@
+{
+    "line_0000": {
+        "line_bbox": [
+            321.0,
+            474.0,
+            1123.0,
+            539.0
+        ],
+        "line_centroid": [
+            722.0,
+            506.5
+        ],
+        "polygon_ids": [
+            "poly_0039"
+        ],
+        "text": "PAPELERIA EL ESTUDIANTE"
+    },
+    "line_0001": {
+        "line_bbox": [
+            156.0,
+            560.0,
+            1652.0,
+            625.0
+        ],
+        "line_centroid": [
+            904.0,
+            592.5
+        ],
+        "polygon_ids": [
+            "poly_0038"
+        ],
+        "text": "FEDERICO GOMEZ6 ZUMPANGO EDO MEX CP55600"
+    },
+    "line_0002": {
+        "line_bbox": [
+            180.0,
+            646.0,
+            1527.0,
+            711.0
+        ],
+        "line_centroid": [
+            853.5,
+            678.5
+        ],
+        "polygon_ids": [
+            "poly_0037"
+        ],
+        "text": "JOSE MENDEZ DAVILA R.F.C.MEDJ630711HU5"
+    },
+    "line_0003": {
+        "line_bbox": [
+            217.0,
+            735.0,
+            1383.0,
+            797.0
+        ],
+        "line_centroid": [
+            800.0,
+            766.0
+        ],
+        "polygon_ids": [
+            "poly_0036"
+        ],
+        "text": "REGIMEN SIMPLIFICADO DE CONFIANZA"
+    },
+    "line_0004": {
+        "line_bbox": [
+            190.0,
+            818.0,
+            1463.0,
+            889.0
+        ],
+        "line_centroid": [
+            826.5,
+            853.5
+        ],
+        "polygon_ids": [
+            "poly_0035"
+        ],
+        "text": "SU SOLUCION EN PAPELERIA DE MAYOREO"
+    },
+    "line_0005": {
+        "line_bbox": [
+            676.0,
+            944.0,
+            1325.0,
+            1013.0
+        ],
+        "line_centroid": [
+            1000.5,
+            978.5
+        ],
+        "polygon_ids": [
+            "poly_0034"
+        ],
+        "text": "17/12/2024 09:50 AM"
+    },
+    "line_0006": {
+        "line_bbox": [
+            422.0,
+            1034.0,
+            948.0,
+            1095.0
+        ],
+        "line_centroid": [
+            685.0,
+            1064.5
+        ],
+        "polygon_ids": [
+            "poly_0033"
+        ],
+        "text": "NOTAS DE VENTA"
+    },
+    "line_0007": {
+        "line_bbox": [
+            64.0,
+            1145.0,
+            257.0,
+            1209.0
+        ],
+        "line_centroid": [
+            160.5,
+            1177.0
+        ],
+        "polygon_ids": [
+            "poly_0032"
+        ],
+        "text": "A1251"
+    },
+    "line_0008": {
+        "line_bbox": [
+            64.0,
+            1298.5,
+            1239.0,
+            1369.5
+        ],
+        "line_centroid": [
+            651.5,
+            1334.0
+        ],
+        "polygon_ids": [
+            "poly_0031",
+            "poly_0030"
+        ],
+        "text": "CAJERO: NM"
+    },
+    "line_0009": {
+        "line_bbox": [
+            61.0,
+            1387.5,
+            1264.0,
+            1452.5
+        ],
+        "line_centroid": [
+            662.5,
+            1420.0
+        ],
+        "polygon_ids": [
+            "poly_0029",
+            "poly_0028"
+        ],
+        "text": "TICKET NO: 4313"
+    },
+    "line_0010": {
+        "line_bbox": [
+            67.0,
+            1543.0,
+            1509.0,
+            1608.0
+        ],
+        "line_centroid": [
+            788.0,
+            1575.5
+        ],
+        "polygon_ids": [
+            "poly_0027",
+            "poly_0026"
+        ],
+        "text": "CANT. DESCRIPCION PRECIO IMPORTE"
+    },
+    "line_0011": {
+        "line_bbox": [
+            205.0,
+            1720.0,
+            1567.0,
+            1786.5
+        ],
+        "line_centroid": [
+            886.0,
+            1753.25
+        ],
+        "polygon_ids": [
+            "poly_0025",
+            "poly_0024"
+        ],
+        "text": "CAJA CUBO CON TAPA CH $18.40 $36.80"
+    },
+    "line_0012": {
+        "line_bbox": [
+            67.0,
+            1809.0,
+            1579.0,
+            1869.0
+        ],
+        "line_centroid": [
+            823.0,
+            1839.0
+        ],
+        "polygon_ids": [
+            "poly_0023",
+            "poly_0022",
+            "poly_0021"
+        ],
+        "text": "2 CAJA CUBO CON TAPA MED $31.00.$62.00"
+    },
+    "line_0013": {
+        "line_bbox": [
+            67.0,
+            1893.0,
+            1475.0,
+            1955.0
+        ],
+        "line_centroid": [
+            771.0,
+            1924.0
+        ],
+        "polygon_ids": [
+            "poly_0019",
+            "poly_0020",
+            "poly_0018"
+        ],
+        "text": "CILINDRO JGO C/3 1 $144.00 $144.00"
+    },
+    "line_0014": {
+        "line_bbox": [
+            61.0,
+            1981.75,
+            1481.0,
+            2043.0
+        ],
+        "line_centroid": [
+            771.0,
+            2012.375
+        ],
+        "polygon_ids": [
+            "poly_0017",
+            "poly_0016",
+            "poly_0015",
+            "poly_0014"
+        ],
+        "text": "2 CAJA CUBO NAT CH $25.00 $50.00"
+    },
+    "line_0015": {
+        "line_bbox": [
+            58.0,
+            2066.5,
+            1496.0,
+            2129.75
+        ],
+        "line_centroid": [
+            777.0,
+            2098.125
+        ],
+        "polygon_ids": [
+            "poly_0013",
+            "poly_0012",
+            "poly_0010",
+            "poly_0011"
+        ],
+        "text": "2 CAJA CUBO NAT MED $70.00 $35.00"
+    },
+    "line_0016": {
+        "line_bbox": [
+            58.0,
+            2154.0,
+            1478.0,
+            2218.0
+        ],
+        "line_centroid": [
+            768.0,
+            2186.0
+        ],
+        "polygon_ids": [
+            "poly_0009",
+            "poly_0008",
+            "poly_0007"
+        ],
+        "text": "22 FANTASIA COUCHE $6.60 $145.20"
+    },
+    "line_0017": {
+        "line_bbox": [
+            352.0,
+            2311.0,
+            1034.0,
+            2369.0
+        ],
+        "line_centroid": [
+            693.0,
+            2340.0
+        ],
+        "polygon_ids": [
+            "poly_0006"
+        ],
+        "text": "NO. DE ARTICULOS: 31"
+    },
+    "line_0018": {
+        "line_bbox": [
+            765.0,
+            2400.0,
+            1248.0,
+            2462.0
+        ],
+        "line_centroid": [
+            1006.5,
+            2431.0
+        ],
+        "polygon_ids": [
+            "poly_0005"
+        ],
+        "text": "TOTAL: $508.00"
+    },
+    "line_0019": {
+        "line_bbox": [
+            707.0,
+            2489.0,
+            1313.0,
+            2551.0
+        ],
+        "line_centroid": [
+            1010.0,
+            2520.0
+        ],
+        "polygon_ids": [
+            "poly_0004"
+        ],
+        "text": "PAGO CON: $508.00"
+    },
+    "line_0020": {
+        "line_bbox": [
+            719.0,
+            2569.0,
+            1270.0,
+            2637.0
+        ],
+        "line_centroid": [
+            994.5,
+            2603.0
+        ],
+        "polygon_ids": [
+            "poly_0003"
+        ],
+        "text": "SU CAMBIO: $0.00"
+    },
+    "line_0021": {
+        "line_bbox": [
+            333.0,
+            2723.0,
+            1105.0,
+            2785.0
+        ],
+        "line_centroid": [
+            719.0,
+            2754.0
+        ],
+        "polygon_ids": [
+            "poly_0002"
+        ],
+        "text": "GRACIAS POR SU COMPRA"
+    },
+    "line_0022": {
+        "line_bbox": [
+            241.0,
+            2806.0,
+            1457.0,
+            2880.0
+        ],
+        "line_centroid": [
+            849.0,
+            2843.0
+        ],
+        "polygon_ids": [
+            "poly_0001"
+        ],
+        "text": "WWW.ABARROTESPUNTODEVENTA.COM"
+    },
+    "line_0023": {
+        "line_bbox": [
+            211.0,
+            2898.0,
+            1371.0,
+            2951.0
+        ],
+        "line_centroid": [
+            791.0,
+            2924.5
+        ],
+        "polygon_ids": [
+            "poly_0000"
+        ],
+        "text": "PARTE DE LA FACTURA GLOBAL DE DIA"
+    }
+}
