@@ -25,7 +25,7 @@ cleanup_project_cache(PROJECT_ROOT)
 
 from src.word_finder import WordFinder
 MODEL_STD = os.path.join(PROJECT_ROOT, "data", "word_finder_model.pkl")
-DATA_FOLDER = os.path.join("C:/PerfectOCR/output/fragmented")
+DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
 try:    
     wf: WordFinder = WordFinder(MODEL_STD, PROJECT_ROOT)
 except Exception as e:
@@ -186,39 +186,86 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
     logger.info(f"QUERIES2: Total sin match: {num_no_matches}")
     logger.info(f"QUERIES: Tiempo total: {time.perf_counter()-time0:.2f}s")
 
-def _test_json(wf: WordFinder, DATA_FOLDER: str,):
+def test_json(wf: WordFinder, DATA_FOLDER: str):
     time0 = time.perf_counter()
     logger.info(f"\nBuscando archivos JSON en la carpeta {DATA_FOLDER}...")
     json_files = glob.glob(os.path.join(DATA_FOLDER, '*.json'))
 
     if not json_files:
         logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER}.")
-        exit()
+        return
 
+    total_matches = 0
+    total_lines_processed = 0
+    
     for file_path in json_files:
-        logger.info(f"Cargando archivo: {os.path.basename(file_path)}")
+        logger.info(f"\n--- Procesando archivo: {os.path.basename(file_path)} ---")
+        
         with open(file_path, 'r', encoding='utf-8') as f:
-            polygons:List[List[str]]  = json.load(f)
+            lines: Dict[str, Dict[str, Any]] = json.load(f)
 
+            # Extraer todos los textos del documento
             all_text: List[str] = []
-            for poly_data in polygons:
-                text = poly_data.get("text", "")
-                if text:
-                    all_text.append(text)
-
-                results = wf.find_keywords(all_text)
-                logger.info(f"Total archivos procesados: {len(json_files)}: {results}")
-                logger.info(f"Tiempo total: {time.perf_counter()-time0:.4f}s")
+            line_ids: List[str] = []
+            
+            for line_id, line_data in lines.items():
+                text = line_data.get("text", "")
+                if text and text.strip():  # Solo textos no vacíos
+                    all_text.append(text.strip())
+                    line_ids.append(line_id)
+            
+            if not all_text:
+                logger.warning(f"No se encontró texto válido en {os.path.basename(file_path)}")
+                continue
+            
+            logger.info(f"Líneas con texto: {len(all_text)}")
+            
+            # Procesar TODAS las líneas del documento en batch
+            time_doc = time.perf_counter()
+            results = wf.find_keywords(all_text)  # Batch processing
+            time_doc_end = time.perf_counter()
+            
+            # Contar y mostrar resultados
+            if results:
+                matches_in_doc = len([r for r in results if r])
+                total_matches += matches_in_doc
+                
+                logger.info(f"Coincidencias encontradas: {matches_in_doc}/{len(all_text)}")
+                logger.info(f"Tiempo procesamiento: {time_doc_end - time_doc:.4f}s")
+                
+                # Mostrar solo las coincidencias más relevantes
+                try:
+                    for i, result in enumerate(results):
+                        if result and len(result) > 0:
+                            logger.info(f"Resultado: {line_ids[i]}: {result}")
+                            # logger.info(f"{line_ids[i]}: '{all_text[i][:30]}...' -> {result.get('field', 'N/A')} ({result.get('similarity', 0):.3f})")
+                            
+                except Exception as e:
+                    logger.error(f"Errpr buscando mejor match: {e}", exc_info=True)
+            else:
+                logger.info("No se encontraron coincidencias en este documento")
+            
+            total_lines_processed += len(all_text)
+    
+    # Resumen final
+    logger.info(f"\n=== RESUMEN FINAL JSON ===")
+    logger.info(f"Archivos procesados: {len(json_files)}")
+    logger.info(f"Total líneas procesadas: {total_lines_processed}")
+    logger.info(f"Total coincidencias: {total_matches}")
+    if total_lines_processed > 0:
+        porcentaje = (total_matches / total_lines_processed) * 100
+        logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
+    logger.info(f"Tiempo total: {time.perf_counter() - time0:.4f}s")
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
     wf = WordFinder(MODEL_STD, PROJECT_ROOT)
-    log_model_summary(wf)
-    # _test_json(wf, DATA_FOLDER)
-    logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
-    run_queries(base_queries, wf)
-    logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
-    run_queries2(base_queries2, wf)
+    # log_model_summary(wf)
+    test_json(wf, DATA_FOLDER)
+    # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+    # run_queries(base_queries, wf)
+    # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
+    # run_queries2(base_queries2, wf)
 
     # # Prueba con diferentes inputs
     # text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
