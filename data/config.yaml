@@ -79,7 +79,6 @@ key_words:
   FechaDocumento:
     - "fecha"
     - "hora"
-    - "dia"
     - "año"
     - "semana"
     - "fecha y hora"
@@ -102,18 +101,15 @@ key_words:
     - "costo unitario"
     - "descripcion"
     - "detalle"
-    - "id"
     - "importe"
     - "monto"
     - "precio"
     - "precio unitario"
     - "producto"
     - "p unit"
-    - "p.u."
     - "p.u.c.d"
     - "p.u.d.o"
     - "sku"
-    - "um"
       
   # Negocio:
   #   - "papeleria"

@@ -4,7 +4,7 @@ import logging
 import unicodedata
 from typing import List, Dict, Any, Tuple, Set
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
-# from scipy import sparse
+import scipy as sp
 
 logger = logging.getLogger(__name__)
 
@@ -62,23 +62,26 @@ class TrainModel:
                         sublinear_tf=False
                     )
 
-                    X_counts = counter.fit_transform(field_variants_normalized)
-                    X_tfidf = tfidf_tr.fit_transform(X_counts)
-                    N_tfidf = np.array(X_tfidf.shape)
+                    X_counts: np.ndarray[Any, np.dtype[np.uint32]] = counter.fit_transform(field_variants_normalized).astype(np.uint32)
+                    X_tfidf: np.ndarray[Any, np.dtype[np.float32]] = tfidf_tr.fit_transform(X_counts).astype(np.float32)
+                    N_tfidf = np.array(X_tfidf.shape, dtype=np.float32)
 
                     # logger.info(f" Numero de features: {N_tfidf[1]}")
                     
-                    # lengths = np.array([[len(w)] for w in variants_normalized])
+                    lengths = np.array([[len(w)] for w in field_variants_normalized], dtype=np.float32)
 
-                    # X_features = sparse.hstack([X_tfidf, lengths])
-
-                    logger.info(f"TRANSFORMER: '{field}', features: {np.array(X_tfidf.shape)}")
-                    # logger.info(f"Features fusionados: {np.array(X_tfidf.shape)}")
+                    X_features = sp.sparse.hstack([X_tfidf, lengths])
+                    logger.info(f"Features fusionados1: {X_features}")
+                    
+                    X_featuresarr = np.asarray(X_features)
+                    
+                    logger.info(f"TRANSFORMER: '{field}', features: {np.array(X_tfidf.shape[:2])}")
+                    logger.info(f"Features fusionados: {X_featuresarr}")
 
                     all_vectorizers[field] = {
                         "counter": counter,
                         "tfidf": tfidf_tr,
-                        # "feature_names": tfidf_tr.get_feature_names_out().tolist() + ["length"],
+                        "feature_names": tfidf_tr.get_feature_names_out().tolist() + ["length"],
                         "n_features": N_tfidf[1],
                     }
 

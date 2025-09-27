@@ -157,8 +157,10 @@ class WordFinder:
                                     ngram_score: float = 1.0
                                 else:
                                     ngram_score: float = self._score_binary_cosine_multi_n(grams_cand, grams_sub)
-                                
-                                # FILTRO FINAL: usar threshold_similarity como filtro definitivo
+                                    len_ratio = max(len(sub), cand_len) / max(1, min(len(sub), cand_len))
+                                    if len_ratio >= 2.0:
+                                        penalizacion = min(len(sub), cand_len) / max(len(sub), cand_len)
+                                        ngram_score *= penalizacion                                
                                 if ngram_score >= final_threshold:
                                     key_field = self.variant_to_field.get(cand)
                                     results.append({
