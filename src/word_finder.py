@@ -27,7 +27,7 @@ class WordFinder:
                 raise ValueError("El pickle no tiene el formato esperado (dict).")
             return self.model
         except Exception as e:
-            logger.info(f"Error al cargar el modelo{e}", exc_info=True)
+            logger.error(f"Error al cargar el modelo{e}", exc_info=True)
 
     def available_models(self) -> List[str]:
         return ["standard"]
@@ -206,7 +206,7 @@ class WordFinder:
                 return []
             return [q[i:i+n] for i in range(len(q) - n + 1)]
         except Exception as e:
-            logger.info(f"Error construyendo n-gramas: {e}", exc_info=True)
+            logger.error(f"Error construyendo n-gramas: {e}", exc_info=True)
             return []
 
     def _ngram_similarity(self, a: str, b: str) -> float:
@@ -216,7 +216,7 @@ class WordFinder:
         # Normaliza por la longitud máxima para manejar n-gramas de longitudes distintas si fuera el caso.
             return matches / float(max(len(a), len(b)))
         except Exception as e:
-            logger.info(f"Error comprobando texto: {e}", exc_info=True)
+            logger.warning(f"Error comprobando texto: {e}", exc_info=True)
             return 0.0
 
     def _binary_cosine(self, size_a: int, size_b: int, soft_intersection: float) -> float:

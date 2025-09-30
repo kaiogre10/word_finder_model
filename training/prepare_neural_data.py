@@ -47,22 +47,24 @@ def load_training_data(key_words_path: str) -> Tuple[List[str], List[str]]:
     logger.info(f"Datos cargados: {len(texts)} ejemplos")
     return texts, labels
 
-def generate_negative_samples(positive_texts: List[str], num_samples: int = 100) -> List[str]:
+def generate_negative_samples(texts: List[str], num_samples: int = 100) -> List[str]:
     """
     Genera ejemplos negativos (texto que NO pertenece a ningún campo).
     """
-    negative_samples = [
+    negative_samples: List[str] = [
         "lorem ipsum", "xyz", "abcdefg", "random text", "noise",
         "zzz", "qwerty", "asdfgh", "123456", "test test", "blank"
         "dummy", "sample", "example", "placeholder", "unknown",
         "other", "misc", "various", "generic", "puntuacion",
-        "puntualidad", "estudiante", 
+        "puntualidad", "estudiante", "italiano", "puntuacion",
+        "punt", "puntillas", "pun", "puesto", "amarillo", "punct",
+        "punto", "ano", "titulo", 
     ]
     
     # Generar variaciones aleatorias
-    chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+    chars = "abcdefghijklmnopqrstuvwxyzáéíóúñü0123456789"
     for _ in range(num_samples - len(negative_samples)):
-        length = random.randint(3, 15)
+        length = random.randint(2, 25)
         random_text = ''.join(random.choice(chars) for _ in range(length))
         negative_samples.append(random_text)
     
@@ -113,19 +115,27 @@ def apply_random_augmentation(text: str, substitutions: Dict[str, List[str]]) ->
             text_list[idx] = random.choice(substitutions[char])
     
     elif operation == 'delete' and len(text_list) > 2:
-        # Borrar un carácter
-        idx = random.randint(0, len(text_list) - 1)
-        text_list.pop(idx)
+        # Borrar de 1 a 9 caracteres aleatorios
+        num_to_delete = random.randint(1, min(9, len(text_list) - 1))
+        for _ in range(num_to_delete):
+            if len(text_list) > 1:
+                idx = random.randint(0, len(text_list) - 1)
+                text_list.pop(idx)
     
     elif operation == 'swap' and len(text_list) > 1:
-        # Intercambiar dos caracteres adyacentes
-        idx = random.randint(0, len(text_list) - 2)
-        text_list[idx], text_list[idx + 1] = text_list[idx + 1], text_list[idx]
+        # Intercambiar de 1 a 9 pares de caracteres adyacentes aleatorios
+        num_swaps = random.randint(1, min(9, len(text_list) - 1))
+        for _ in range(num_swaps):
+            if len(text_list) > 1:
+                idx = random.randint(0, len(text_list) - 2)
+                text_list[idx], text_list[idx + 1] = text_list[idx + 1], text_list[idx]
     
     elif operation == 'insert' and len(text_list) > 0:
-        # Insertar un carácter aleatorio
-        idx = random.randint(0, len(text_list))
-        text_list.insert(idx, random.choice('abcdefghijklmnopqrstuvwxyz0123456789'))
+        # Insertar de 1 a 9 caracteres aleatorios
+        num_to_insert = random.randint(1, 9)
+        for _ in range(num_to_insert):
+            idx = random.randint(0, len(text_list))
+            text_list.insert(idx, random.choice('abcdefghijklmnopqrstuvwxyzáéíóúñü0123456789'))
     
     return ''.join(text_list)
 

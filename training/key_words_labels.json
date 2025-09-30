@@ -84,6 +84,8 @@
       {"text": "hora", "label": "FechaDocumento"},
       {"text": "dia", "label": "FechaDocumento"},
       {"text": "semana", "label": "FechaDocumento"},
+      {"text": "mes", "label": "FechaDocumento"},
+      {"text": "año", "label": "FechaDocumento"},
       {"text": "fecha y hora", "label": "FechaDocumento"},
       {"text": "hora y fecha", "label": "FechaDocumento"},
       {"text": "enero", "label": "FechaDocumento"},
