@@ -53,9 +53,10 @@ def generate_negative_samples(positive_texts: List[str], num_samples: int = 100)
     """
     negative_samples = [
         "lorem ipsum", "xyz", "abcdefg", "random text", "noise",
-        "zzz", "qwerty", "asdfgh", "123456", "test test",
+        "zzz", "qwerty", "asdfgh", "123456", "test test", "blank"
         "dummy", "sample", "example", "placeholder", "unknown",
-        "other", "misc", "various", "generic", "blank"
+        "other", "misc", "various", "generic", "puntuacion",
+        "puntualidad", "estudiante", 
     ]
     
     # Generar variaciones aleatorias
@@ -76,16 +77,13 @@ def augment_data(texts: List[str], labels: List[str], augmentation_factor: int =
     
     # Diccionario de sustituciones comunes en OCR
     ocr_substitutions = {
-        'a': ['@', '4', 'á', 'à'],
-        'e': ['3', 'é', 'è'],
-        'i': ['1', 'l', 'í', 'ì'],
-        'o': ['0', 'ó', 'ò'],
-        's': ['5', '$'],
-        't': ['7', '+'],
+        'a': ['@', 'á', 'à'],
+        'e': [ 'é', 'è'],
+        'i': ['í', 'ì', '|'],
+        'o': ['ó', 'ò'],
+        't': ['+'],
         'u': ['ú', 'ù'],
         'n': ['ñ'],
-        'b': ['8'],
-        'g': ['9']
     }
     
     for text, label in zip(texts, labels):
