@@ -1,0 +1,24 @@
+# training/neural_config.yaml
+model:
+  embedding_dim: 64
+  hidden_dim: 128
+  dropout: 0.3
+  max_len: 50
+
+training:
+  num_epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  patience: 15
+  val_split: 0.2
+  test_split: 0.1
+
+data:
+  augment: true
+  augmentation_factor: 3
+  negative_ratio: 0.2
+  
+inference:
+  confidence_threshold: 0.7
+  use_hybrid: true
+  hybrid_traditional_threshold: 0.9

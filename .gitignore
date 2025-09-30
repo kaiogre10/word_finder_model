@@ -9,5 +9,6 @@ logs/
 .idea/
 *idea
 input2/
+input/
 *pkl
-*.gitignore 
+*.gitignore

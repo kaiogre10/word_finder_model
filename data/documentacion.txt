@@ -1,0 +1,125 @@
+================================================================================
+ARQUITECTURA DEL PROYECTO CON RED NEURONAL
+================================================================================
+
+ESTRUCTURA DE ARCHIVOS:
+-----------------------
+
+word_finder_model/
+│
+├── src/                              [Código fuente]
+│   ├── word_finder.py                [EXISTENTE - Sin cambios]
+│   ├── train_model.py                [EXISTENTE - Sin cambios]
+│   ├── neural_classifier.py          [NUEVO] Arquitectura de la red neuronal
+│   ├── neural_trainer.py             [NUEVO] Entrenamiento de la red
+│   └── hybrid_finder.py              [NUEVO] Sistema híbrido (tradicional + neural)
+│
+├── data/                             [Datos y modelos]
+│   ├── word_finder_model.pkl         [EXISTENTE - Sin cambios]
+│   └── neural_model.pth              [NUEVO] Modelo neuronal entrenado
+│
+├── training/                         [Datos de entrenamiento]
+│   ├── key_words_labels.json         [EXISTENTE - Sin cambios]
+│   ├── word_finder_training_v1.json  [EXISTENTE - Sin cambios]
+│   ├── neural_config.yaml            [NUEVO] Configuración de la red neuronal
+│   ├── neural_training_data.json     [NUEVO] Datos preparados para entrenar
+│   └── prepare_neural_data.py        [NUEVO] Script para preparar datos
+│
+├── scripts/                          [Scripts de utilidad]
+│   ├── generate_model.py             [EXISTENTE - Sin cambios]
+│   └── train_neural_model.py         [NUEVO] Script para entrenar la red
+│
+├── test/                             [Tests]
+│   ├── test_model.py                 [EXISTENTE - Sin cambios]
+│   └── test_neural.py                [NUEVO] Test del modelo neuronal
+│
+└── [otros archivos sin cambios]
+
+================================================================================
+FLUJO DE USO:
+================================================================================
+
+1. PREPARAR DATOS:
+   > cd training
+   > python prepare_neural_data.py
+
+2. ENTRENAR MODELO NEURONAL:
+   > cd scripts
+   > python train_neural_model.py
+
+3. PROBAR MODELO:
+   > cd test
+   > python test_neural.py
+
+4. USAR EN TU CÓDIGO:
+   
+   # Opción A: Solo sistema tradicional (como siempre)
+   from src.word_finder import WordFinder
+   wf = WordFinder(model_path, project_root)
+   results = wf.find_keywords("total")
+   
+   # Opción B: Sistema híbrido (tradicional + neural)
+   from src.hybrid_finder import HybridWordFinder
+   hwf = HybridWordFinder(model_path, project_root, neural_model_path)
+   results = hwf.find_keywords("totai")  # Detecta variaciones
+
+================================================================================
+ARQUITECTURA DE LA RED NEURONAL:
+================================================================================
+
+Input: Texto OCR normalizado
+   ↓
+[Embedding de Caracteres]
+   - Convierte cada carácter en vector denso (64 dim)
+   ↓
+[Convoluciones Paralelas]
+   - Conv1D kernel=2 (bi-gramas)
+   - Conv1D kernel=3 (tri-gramas)
+   - Conv1D kernel=4 (4-gramas)
+   - BatchNorm para estabilidad
+   ↓
+[LSTM Bidireccional]
+   - 2 capas
+   - Captura dependencias de secuencia
+   - Dropout para regularización
+   ↓
+[Atención Multi-Cabeza]
+   - 4 cabezas
+   - Se enfoca en caracteres importantes
+   ↓
+[Clasificador]
+   - 3 capas fully connected
+   - Dropout entre capas
+   - BatchNorm para estabilidad
+   ↓
+Output: Probabilidades para cada key_field
+
+================================================================================
+VENTAJAS DEL SISTEMA HÍBRIDO:
+================================================================================
+
+✓ Mantiene eficiencia del sistema tradicional
+✓ Detecta variaciones con errores de OCR
+✓ Aprende patrones de caracteres robustos
+✓ Compatible con código existente
+✓ Puede desactivarse si no es necesario
+✓ No modifica archivos existentes
+✓ Fácil de entrenar con más datos
+
+================================================================================
+CONFIGURACIÓN:
+================================================================================
+
+Ver training/neural_config.yaml para ajustar:
+- Dimensiones del modelo
+- Hiperparámetros de entrenamiento
+- Umbrales de confianza
+- Parámetros de data augmentation
+
+================================================================================
+REQUISITOS:
+================================================================================
+
+pip install torch scikit-learn pyyaml
+
+================================================================================

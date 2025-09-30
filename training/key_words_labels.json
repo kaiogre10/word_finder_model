@@ -1,0 +1,92 @@
+{
+  "key_fields": {
+    "MontoTotalDocumento": [
+      {"text": "total", "label": "MontoTotalDocumento"},
+      {"text": "total a pagar", "label": "MontoTotalDocumento"},
+      {"text": "importe total", "label": "MontoTotalDocumento"},
+      {"text": "importe a pagar", "label": "MontoTotalDocumento"},
+      {"text": "importe total a pagar", "label": "MontoTotalDocumento"},
+      {"text": "cantidad a pagar", "label": "MontoTotalDocumento"}
+    ],
+    "Subtotal": [
+      {"text": "subtotal", "label": "Subtotal"},
+      {"text": "subtotal a pagar", "label": "Subtotal"}
+    ],
+    "TotalProductos": [
+      {"text": "total de articulos", "label": "TotalProductos"},
+      {"text": "total de piezas", "label": "TotalProductos"},
+      {"text": "total de unidades", "label": "TotalProductos"},
+      {"text": "no de articulos", "label": "TotalProductos"},
+      {"text": "cantidad de articulos", "label": "TotalProductos"},
+      {"text": "no articulos", "label": "TotalProductos"},
+      {"text": "no de piezas", "label": "TotalProductos"},
+      {"text": "no de pz", "label": "TotalProductos"},
+      {"text": "articulos", "label": "TotalProductos"},
+      {"text": "no de unidades", "label": "TotalProductos"},
+      {"text": "cantidad total de piezas", "label": "TotalProductos"},
+      {"text": "cantidad de piezas totales", "label": "TotalProductos"},
+      {"text": "pza totales", "label": "TotalProductos"},
+      {"text": "piezas totales", "label": "TotalProductos"},
+      {"text": "pzas totales", "label": "TotalProductos"},
+      {"text": "articulos vendidos", "label": "TotalProductos"}
+    ],
+    "MontoIVAGeneral": [
+      {"text": "iva", "label": "MontoIVAGeneral"},
+      {"text": "impuesto valor agregado", "label": "MontoIVAGeneral"},
+      {"text": "impuesto al valor agregado", "label": "MontoIVAGeneral"},
+      {"text": "impuesto", "label": "MontoIVAGeneral"}
+    ],
+    "RFCProveedor": [
+      {"text": "rfc", "label": "RFCProveedor"},
+      {"text": "registro federal de contribuyentes", "label": "RFCProveedor"},
+      {"text": "regimen fiscal", "label": "RFCProveedor"},
+      {"text": "razon social", "label": "RFCProveedor"}
+    ],
+    "FolioDocumento": [
+      {"text": "folio", "label": "FolioDocumento"},
+      {"text": "numero de ticket", "label": "FolioDocumento"},
+      {"text": "registro", "label": "FolioDocumento"},
+      {"text": "ticket no", "label": "FolioDocumento"},
+      {"text": "nota de venta", "label": "FolioDocumento"},
+      {"text": "nota no", "label": "FolioDocumento"},
+      {"text": "nota de remision", "label": "FolioDocumento"},
+      {"text": "registro no", "label": "FolioDocumento"},
+      {"text": "pedido no", "label": "FolioDocumento"}
+    ],
+    "FechaDocumento": [
+      {"text": "fecha", "label": "FechaDocumento"},
+      {"text": "hora", "label": "FechaDocumento"},
+      {"text": "año", "label": "FechaDocumento"},
+      {"text": "semana", "label": "FechaDocumento"},
+      {"text": "fecha y hora", "label": "FechaDocumento"},
+      {"text": "hora y fecha", "label": "FechaDocumento"}
+    ],
+    "NombreCliente": [
+      {"text": "cliente", "label": "NombreCliente"},
+      {"text": "usuario", "label": "NombreCliente"},
+      {"text": "comprador", "label": "NombreCliente"},
+      {"text": "consumidor", "label": "NombreCliente"},
+      {"text": "socio", "label": "NombreCliente"}
+    ],
+    "HeaderWords": [
+      {"text": "artículo", "label": "HeaderWords"},
+      {"text": "cantidad", "label": "HeaderWords"},
+      {"text": "clave", "label": "HeaderWords"},
+      {"text": "codigo", "label": "HeaderWords"},
+      {"text": "concepto", "label": "HeaderWords"},
+      {"text": "costo", "label": "HeaderWords"},
+      {"text": "costo unitario", "label": "HeaderWords"},
+      {"text": "descripcion", "label": "HeaderWords"},
+      {"text": "detalle", "label": "HeaderWords"},
+      {"text": "importe", "label": "HeaderWords"},
+      {"text": "monto", "label": "HeaderWords"},
+      {"text": "precio", "label": "HeaderWords"},
+      {"text": "precio unitario", "label": "HeaderWords"},
+      {"text": "producto", "label": "HeaderWords"},
+      {"text": "p unit", "label": "HeaderWords"},
+      {"text": "p.u.c.d", "label": "HeaderWords"},
+      {"text": "p.u.d.o", "label": "HeaderWords"},
+      {"text": "sku", "label": "HeaderWords"}
+    ]
+  }
+}
