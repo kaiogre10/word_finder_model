@@ -1,6 +1,7 @@
 # training/prepare_neural_data.py
 import json
 import re
+import os
 import unicodedata
 import logging
 from typing import List, Dict, Tuple
@@ -189,7 +190,6 @@ def prepare_training_data(key_words_path: str, output_path: str,
         'augmentation_factor': augmentation_factor if augment else 0
     }
     
-    # Guardar
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(dataset, f, ensure_ascii=False, indent=2)
     
@@ -207,10 +207,7 @@ def prepare_training_data(key_words_path: str, output_path: str,
     
     return dataset
 
-if __name__ == "__main__":
-    import os
-    
-    # Rutas
+if __name__ == "__main__":    
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     key_words_path = os.path.join(project_root, "training", "key_words_labels.json")
     output_path = os.path.join(project_root, "training", "neural_training_data.json")

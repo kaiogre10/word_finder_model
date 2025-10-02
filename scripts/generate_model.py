@@ -3,6 +3,7 @@ import re
 import logging
 import pickle
 import unicodedata
+import json
 import yaml
 import time
 from typing import List, Dict, Any, Tuple, Optional
@@ -11,10 +12,11 @@ from src.train_model import TrainModel
 logger = logging.getLogger(__name__)
 
 class ModelGenerator:
-    def __init__(self, config_file: str, project_root: str):
+    def __init__(self, config_file: str, project_root: str, key_words_file: str):
         time0 = time.perf_counter()
         self.project_root = project_root
         self.config_file = config_file
+        self.key_words_file = key_words_file
         logger.info(f"Iniciación en: {time.perf_counter() - time0} s")
             
     def _normalize(self, s: str) -> str:
@@ -34,12 +36,9 @@ class ModelGenerator:
             return []
         return [s[i:i+n] for i in range(len(s) - n + 1)]
             
-    def generate_model(self, config_file: str) -> Optional[Dict[str, Any]]:
+    def generate_model(self, config_file: str, key_words_file: str) -> Optional[Dict[str, Any]]:
+        """Lee YAML, normaliza variantes, precomputa n-gramas 2-5y guarda un pickle con toda la info necesaria para WordFinder."""
         time1 = time.perf_counter()
-        """
-        Lee YAML, normaliza variantes, precomputa n-gramas 2-5
-        y guarda un pickle con toda la info necesaria para WordFinder.
-        """
         self.config_dict: Dict[str, Any] = {}
         try:
             if not os.path.exists(self.config_file):
@@ -50,14 +49,28 @@ class ModelGenerator:
         except Exception as e:
             logger.error(f"Error cargando el modelo: {e}", exc_info=True)
             return None 
-
+        
+        self.key_words: Dict[str, List[str]] = {}
+        try:
+            if not os.path.exists(self.key_words_file):
+                raise FileNotFoundError(f"No existe config: {self.key_words_file}")
+            with open(key_words_file, "r", encoding="utf-8") as f:
+                if key_words_file:
+                    self.key_words = json.load(f)
+        except Exception as e:
+            logger.error(f"Error cargando el modelo: {e}", exc_info=True)
+            return None
+        
         self._train = TrainModel(config=self.config_dict, project_root=self.project_root)
         self.params: Dict[str, Any] = self.config_dict.get("params", {})
         self.ngr: Tuple[int, int] = self.params.get("char_ngram_range", [])
         self.gngr: Tuple[int, int]= self.params.get("char_ngram_global", [])
         self.top_ngrams = self.params.get("top_ngrams", [])
         self.top_ngrams_fraction = self.params.get("top_ngrams_fraction", [])
-        key_words: Dict[str, List[Dict[str, str]]] = self.config_dict.get("key_words", {}) 
+        key_words: Dict[str, List[Dict[str, str]]] = self.key_words.get("key_words", {})
+        forbidden_words_raw = self.key_words.get("forbbiden_words", [])
+        forbidden_words = [self._normalize(word) for word in forbidden_words_raw if isinstance(word, str)]
+        forbidden_words = [word for word in forbidden_words if word]  # Filtrar vacíos
 
         logger.info(f"Rango elegido: {self.ngr}")
         try:
@@ -68,6 +81,7 @@ class ModelGenerator:
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
+        forbidden_words : List[str] = []
         
         for field, variants in key_words.items():
             if not variants:
@@ -106,15 +120,33 @@ class ModelGenerator:
                 "grams": gmap
             })
             
+        # Generar n-gramas para forbidden_words
+        forbidden_grams_index: List[Dict[str, Any]] = []
+        for forbidden_word in forbidden_words:
+            length = len(forbidden_word)
+            gmap: Dict[int, List[str]] = {}
+            for n in range(n_min, n_max + 1):
+                ngrams = self._ngrams(forbidden_word, n)
+                gmap[n] = ngrams
+            
+            forbidden_grams_index.append({
+                "len": length,
+                "grams": gmap,
+                "word": forbidden_word
+            })
+
         model: Dict[str, Any] = {
             "params": self.params,
             "global_filter": global_filter,
             "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
             "global_words": global_words,
+            "forbidden_words": forbidden_words,
+            "forbidden_grams_index": forbidden_grams_index,
             "grams_index": grams_index,
             }
-
+            
+        logger.info(f"Entradas guardadas en el modelo: {list(model.keys())}")
         logger.info(f"Modelo generado en: {time.perf_counter() - time1} s")
 
         output_path = os.path.join(self.project_root, "data", "word_finder_model.pkl")

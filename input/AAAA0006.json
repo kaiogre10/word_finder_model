@@ -1,19 +1,21 @@
 {
     "line_0000": {
         "line_bbox": [
-            98.0,
-            433.0,
-            1597.0,
-            563.0
+            97.0,
+            430.0,
+            1598.0,
+            567.0
         ],
         "line_centroid": [
             847.5,
-            498.0
+            498.5
         ],
         "polygon_ids": [
-            "poly_0086"
+            "poly_0000",
+            "poly_0001",
+            "poly_0002"
         ],
-        "text": "Papeleria el 'studiante"
+        "text": "Papeleria el estudiante"
     },
     "line_0001": {
         "line_bbox": [
@@ -27,23 +29,32 @@
             629.5
         ],
         "polygon_ids": [
-            "poly_0085"
+            "poly_0003",
+            "poly_0004",
+            "poly_0005",
+            "poly_0006",
+            "poly_0007",
+            "poly_0008"
         ],
-        "text": "FEDERICO GOMEZ#6 ZUMP: -* ED0 MEX CP55600"
+        "text": "FEDERICO GOMEZ6 ZUMP ED0 MEX CP55600"
     },
     "line_0002": {
         "line_bbox": [
-            486.0,
+            489.0,
             680.0,
-            1319.0,
+            1318.9999999999998,
             739.0
         ],
         "line_centroid": [
-            902.5,
+            903.9999999999999,
             709.5
         ],
         "polygon_ids": [
-            "poly_0084"
+            "poly_0009",
+            "poly_0010",
+            "poly_0011",
+            "poly_0012",
+            "poly_0013"
         ],
         "text": "JOSE MENDEZ DAYILA R.F.C. MEDJ630711HU5"
     },
@@ -51,15 +62,18 @@
         "line_bbox": [
             529.0,
             754.0,
-            1267.0,
+            1267.0000000000002,
             822.0
         ],
         "line_centroid": [
-            898.0,
+            898.0000000000001,
             788.0
         ],
         "polygon_ids": [
-            "poly_0083"
+            "poly_0014",
+            "poly_0015",
+            "poly_0016",
+            "poly_0017"
         ],
         "text": "REGIMEN SIMPLIFICADO DE CONFIANZA"
     },
@@ -67,15 +81,15 @@
         "line_bbox": [
             468.0,
             834.0,
-            1337.0,
+            1340.0,
             908.0
         ],
         "line_centroid": [
-            902.5,
+            904.0,
             871.0
         ],
         "polygon_ids": [
-            "poly_0082"
+            "poly_0018"
         ],
         "text": "Dibujo,Ingenieria,Escritura,Computacion,"
     },
@@ -83,34 +97,41 @@
         "line_bbox": [
             511.0,
             917.0,
-            1294.0,
+            1291.0,
             988.0
         ],
         "line_centroid": [
-            902.5,
+            901.0,
             952.5
         ],
         "polygon_ids": [
-            "poly_0081"
+            "poly_0019",
+            "poly_0020",
+            "poly_0021",
+            "poly_0022"
         ],
         "text": "Oficina, Papeles Extendidos, Escolar."
     },
     "line_0006": {
         "line_bbox": [
-            96.0,
-            1032.5,
-            1637.0,
-            1119.5
+            101.0,
+            1026.1666666666667,
+            1634.0,
+            1108.5
         ],
         "line_centroid": [
-            866.5,
-            1076.0
+            867.5,
+            1067.3333333333335
         ],
         "polygon_ids": [
-            "poly_0080",
-            "poly_0079"
+            "poly_0028",
+            "poly_0023",
+            "poly_0024",
+            "poly_0025",
+            "poly_0026",
+            "poly_0027"
         ],
-        "text": "A1251 ROSA MARIA CENTURION LOPEZ Cte:"
+        "text": "Cte A1251 ROSA MARIA CENTURION LOPEZ"
     },
     "line_0007": {
         "line_bbox": [
@@ -124,341 +145,385 @@
             1191.0
         ],
         "polygon_ids": [
-            "poly_0078"
+            "poly_0029",
+            "poly_0030",
+            "poly_0031"
         ],
         "text": "19 ene 25"
     },
     "line_0008": {
         "line_bbox": [
             118.0,
-            1237.25,
+            1238.8,
             1576.0,
-            1312.25
+            1310.2
         ],
         "line_centroid": [
             847.0,
-            1274.75
+            1274.5
         ],
         "polygon_ids": [
-            "poly_0077",
-            "poly_0076",
-            "poly_0075",
-            "poly_0074"
+            "poly_0032",
+            "poly_0033",
+            "poly_0034",
+            "poly_0035",
+            "poly_0036"
         ],
-        "text": "Nota Mayoreo Folic: 0176 13:43"
+        "text": "Nota Mayoreo Folic 0176 1343"
     },
     "line_0009": {
         "line_bbox": [
-            92.0,
-            1318.5,
+            89.0,
+            1318.0,
             490.0,
-            1386.5
+            1387.0
         ],
         "line_centroid": [
-            291.0,
+            289.5,
             1352.5
         ],
         "polygon_ids": [
-            "poly_0072",
-            "poly_0073"
+            "poly_0037",
+            "poly_0038",
+            "poly_0039"
         ],
-        "text": "Atendio: 8 ML"
+        "text": "Atendio 8 ML"
     },
     "line_0010": {
         "line_bbox": [
             66.0,
             1445.6,
-            1723.0,
+            1719.0,
             1519.8
         ],
         "line_centroid": [
-            894.5,
+            892.5,
             1482.6999999999998
         ],
         "polygon_ids": [
-            "poly_0071",
-            "poly_0070",
-            "poly_0069",
-            "poly_0067",
-            "poly_0068"
+            "poly_0040",
+            "poly_0041",
+            "poly_0042",
+            "poly_0043",
+            "poly_0044"
         ],
-        "text": "Cant. Producto P.U.C.D: Importe P.S."
+        "text": "Cant. Producto P.U.C.O Importe P.S."
     },
     "line_0011": {
         "line_bbox": [
             125.0,
-            1540.0,
+            1535.6,
             1723.0,
-            1618.8
+            1617.5
         ],
         "line_centroid": [
             924.0,
-            1579.4
+            1576.55
         ],
         "polygon_ids": [
-            "poly_0065",
-            "poly_0066",
-            "poly_0062",
-            "poly_0063",
-            "poly_0064"
+            "poly_0045",
+            "poly_0046",
+            "poly_0047",
+            "poly_0048",
+            "poly_0049",
+            "poly_0050",
+            "poly_0051",
+            "poly_0052",
+            "poly_0053",
+            "poly_0054"
         ],
-        "text": "VINCl 25 AM LIM 50 C/10 3 256.50 85.50 12"
+        "text": "3 VINCI 25 AM LIM 50 C10 85.50 256.50 12"
     },
     "line_0012": {
         "line_bbox": [
             128.0,
-            1644.2,
+            1643.4285714285713,
             1723.0,
-            1720.0
+            1716.142857142857
         ],
         "line_centroid": [
             925.5,
-            1682.1
+            1679.7857142857142
         ],
         "polygon_ids": [
-            "poly_0061",
+            "poly_0055",
+            "poly_0056",
+            "poly_0057",
+            "poly_0058",
             "poly_0059",
             "poly_0060",
-            "poly_0057",
-            "poly_0058"
+            "poly_0061"
         ],
         "text": "5 PUNTILLAS PM 0.5 9.49 47.45 15"
     },
     "line_0013": {
         "line_bbox": [
             125.0,
-            1746.6,
+            1744.5,
             1723.0,
-            1823.0
+            1822.625
         ],
         "line_centroid": [
             924.0,
-            1784.8
+            1783.5625
         ],
         "polygon_ids": [
-            "poly_0056",
-            "poly_0055",
-            "poly_0052",
-            "poly_0053",
-            "poly_0054"
+            "poly_0062",
+            "poly_0063",
+            "poly_0064",
+            "poly_0065",
+            "poly_0066",
+            "poly_0067",
+            "poly_0068",
+            "poly_0069"
         ],
-        "text": "1 PASTA CTA SURT C/25 135.00 135.00 12"
+        "text": "1 PASTA CTA SURT C25 135.00 135.00 12"
     },
     "line_0014": {
         "line_bbox": [
             125.0,
-            1847.2,
+            1845.625,
             1723.0,
-            1923.6
+            1923.375
         ],
         "line_centroid": [
             924.0,
-            1885.4
+            1884.5
         ],
         "polygon_ids": [
-            "poly_0051",
-            "poly_0049",
-            "poly_0047",
-            "poly_0048",
-            "poly_0050"
+            "poly_0070",
+            "poly_0071",
+            "poly_0072",
+            "poly_0073",
+            "poly_0074",
+            "poly_0075",
+            "poly_0076",
+            "poly_0077"
         ],
-        "text": "2 FOLDER CTA CR C/10 45.00 22.50 5"
+        "text": "2 FOLDER CTA CR C10 22.50 45.00 5"
     },
     "line_0015": {
         "line_bbox": [
             125.0,
-            1949.0,
-            1726.0,
-            2026.0
+            1947.5,
+            1723.0,
+            2024.125
         ],
         "line_centroid": [
-            925.5,
-            1987.5
+            924.0,
+            1985.8125
         ],
         "polygon_ids": [
-            "poly_0046",
-            "poly_0044",
-            "poly_0043",
-            "poly_0042",
-            "poly_0045"
+            "poly_0078",
+            "poly_0079",
+            "poly_0080",
+            "poly_0081",
+            "poly_0082",
+            "poly_0083",
+            "poly_0084",
+            "poly_0085"
         ],
-        "text": "1 SOBRE C/ROND CTA C/10 49.80 49.80 7"
+        "text": "1 SOBRE CROND CTA C10 49.80 49.80 7"
     },
     "line_0016": {
         "line_bbox": [
             125.0,
-            2047.6,
+            2048.4285714285716,
             1726.0,
-            2127.4
+            2127.1428571428573
         ],
         "line_centroid": [
             925.5,
-            2087.5
+            2087.7857142857147
         ],
         "polygon_ids": [
-            "poly_0039",
-            "poly_0041",
-            "poly_0037",
-            "poly_0038",
-            "poly_0040"
+            "poly_0086",
+            "poly_0087",
+            "poly_0088",
+            "poly_0089",
+            "poly_0090",
+            "poly_0091",
+            "poly_0092"
         ],
-        "text": "CREPE NGO C/10 2 96.00 48.00 8"
+        "text": "2 CREPE NGO C10 48.00 96.00 8"
     },
     "line_0017": {
         "line_bbox": [
             128.0,
             2154.0,
             1723.0,
-            2231.6
+            2230.25
         ],
         "line_centroid": [
             925.5,
-            2192.8
+            2192.125
         ],
         "polygon_ids": [
-            "poly_0036",
-            "poly_0034",
-            "poly_0033",
-            "poly_0032",
-            "poly_0035"
+            "poly_0093",
+            "poly_0094",
+            "poly_0095",
+            "poly_0096",
+            "poly_0097",
+            "poly_0098",
+            "poly_0099",
+            "poly_0100"
         ],
-        "text": "1 KM MED NG C/12 39.90 39.90 5"
+        "text": "1 KM MED NG C12 39.90 39.90 5"
     },
     "line_0018": {
         "line_bbox": [
-            118.0,
-            2258.6,
+            125.0,
+            2258.25,
             1719.0,
-            2337.4
+            2337.75
         ],
         "line_centroid": [
-            918.5,
+            922.0,
             2298.0
         ],
         "polygon_ids": [
-            "poly_0031",
-            "poly_0029",
-            "poly_0028",
-            "poly_0027",
-            "poly_0030"
+            "poly_0101",
+            "poly_0102",
+            "poly_0103",
+            "poly_0104",
+            "poly_0105",
+            "poly_0106",
+            "poly_0107",
+            "poly_0108"
         ],
-        "text": "1 KM FINO NG C/12 42.30 42.30 6"
+        "text": "1 KM FINO NG C12 42.30 42.30 6"
     },
     "line_0019": {
         "line_bbox": [
             125.0,
-            2362.4,
+            2363.0,
             1719.0,
-            2438.8
+            2435.5
         ],
         "line_centroid": [
             922.0,
-            2400.6000000000004
+            2399.25
         ],
         "polygon_ids": [
-            "poly_0026",
-            "poly_0024",
-            "poly_0023",
-            "poly_0022",
-            "poly_0025"
+            "poly_0109",
+            "poly_0110",
+            "poly_0111",
+            "poly_0112",
+            "poly_0113",
+            "poly_0114",
+            "poly_0115",
+            "poly_0116"
         ],
-        "text": "3 CARTA DIAM CANARI0 C/10 30.00 90.00 5"
+        "text": "3 CARTA DIAM CANARI0 C10 30.00 90.00 5"
     },
     "line_0020": {
         "line_bbox": [
             119.0,
-            2465.4,
+            2466.1428571428573,
             1719.0,
-            2541.8
+            2539.0
         ],
         "line_centroid": [
             919.0,
-            2503.6000000000004
+            2502.5714285714284
         ],
         "polygon_ids": [
-            "poly_0018",
-            "poly_0021",
-            "poly_0019",
-            "poly_0017",
-            "poly_0020"
+            "poly_0117",
+            "poly_0118",
+            "poly_0119",
+            "poly_0120",
+            "poly_0121",
+            "poly_0122",
+            "poly_0123"
         ],
-        "text": "PLACA UNIC 25X25X1 10 2.98 29.76 5"
+        "text": "10 PLACA UNIC 25X25X1 2.98 29.76 5"
     },
     "line_0021": {
         "line_bbox": [
-            120.0,
+            132.0,
             2562.4,
             1723.0,
-            2642.4
+            2638.8
         ],
         "line_centroid": [
-            921.5,
-            2602.4
+            927.5,
+            2600.6000000000004
         ],
         "polygon_ids": [
-            "poly_0016",
-            "poly_0014",
-            "poly_0013",
-            "poly_0012",
-            "poly_0015"
+            "poly_0124",
+            "poly_0125",
+            "poly_0126",
+            "poly_0127",
+            "poly_0128",
+            "poly_0129",
+            "poly_0130",
+            "poly_0131",
+            "poly_0132",
+            "poly_0133"
         ],
         "text": "1 PALO RED DELG 4X60 K 95 59.28 59.28 2"
     },
     "line_0022": {
         "line_bbox": [
             128.0,
-            2664.0,
+            2662.25,
             1723.0,
-            2742.6
+            2740.375
         ],
         "line_centroid": [
             925.5,
-            2703.3
+            2701.3125
         ],
         "polygon_ids": [
-            "poly_0011",
-            "poly_0010",
-            "poly_0009",
-            "poly_0007",
-            "poly_0008"
+            "poly_0134",
+            "poly_0135",
+            "poly_0136",
+            "poly_0137",
+            "poly_0138",
+            "poly_0139",
+            "poly_0140",
+            "poly_0141"
         ],
-        "text": "1 GLOBO 5 SURT C/100 34.93 34.93 50"
+        "text": "1 GLOBO 5 SURT C100 34.93 34.93 50"
     },
     "line_0023": {
         "line_bbox": [
             125.0,
-            2765.2,
+            2765.25,
             1719.0,
-            2843.8
+            2841.875
         ],
         "line_centroid": [
             922.0,
-            2804.5
+            2803.5625
         ],
         "polygon_ids": [
-            "poly_0006",
-            "poly_0004",
-            "poly_0003",
-            "poly_0002",
-            "poly_0005"
+            "poly_0142",
+            "poly_0143",
+            "poly_0144",
+            "poly_0145",
+            "poly_0146",
+            "poly_0147",
+            "poly_0148",
+            "poly_0149"
         ],
-        "text": "2 CART FLUORESC AM C/10 49.10 98.20 8"
+        "text": "2 CART FLUORESC AM C10 49.10 98.20 8"
     },
     "line_0024": {
         "line_bbox": [
-            1059.0,
+            1056.0,
             2875.5,
             1634.0,
             2953.0
         ],
         "line_centroid": [
-            1346.5,
+            1345.0,
             2914.25
         ],
         "polygon_ids": [
-            "poly_0000",
-            "poly_0001"
+            "poly_0151",
+            "poly_0150"
         ],
-        "text": "1024.12 Total:"
+        "text": "Total 1024.12"
     }
 }

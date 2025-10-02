@@ -71,12 +71,12 @@ class TrainModel:
                     lengths = np.array([[len(w)] for w in field_variants_normalized], dtype=np.float32)
 
                     X_features = sp.sparse.hstack([X_tfidf, lengths])
-                    logger.info(f"Features fusionados1: {X_features}")
+                    # logger.info(f"Features fusionados1: {X_features}")
                     
                     X_featuresarr = np.asarray(X_features)
                     
                     logger.info(f"TRANSFORMER: '{field}', features: {np.array(X_tfidf.shape[:2])}")
-                    logger.info(f"Features fusionados: {X_featuresarr}")
+                    # logger.info(f"Features fusionados: {X_featuresarr}")
 
                     all_vectorizers[field] = {
                         "counter": counter,
