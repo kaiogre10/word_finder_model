@@ -12,3 +12,4 @@ input2/
 input/
 *pkl
 *.gitignore
+*word_finder_model.pkl

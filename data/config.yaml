@@ -1,7 +1,7 @@
 params:
   char_ngram_range: [2, 4]
   char_ngram_global: [3, 4]
-  threshold_similarity: 0.95
+  threshold_similarity: 0.90
   global_filter_threshold: 0.20
   thresholds_by_len:
     - [1, 2, 0.95]
@@ -23,5 +23,5 @@ params:
   top_ngrams: 150
   top_ngrams_fraction: 5.0
   
-  forb_match: 0.90
+  forb_match: 0.85
         
