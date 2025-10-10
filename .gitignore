@@ -1,15 +1,88 @@
+# Python
 __pycache__/
-.cursor/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Logs
 *.log
 logs/
-.idea/
-*idea
-input2/
-input/
-*pkl
-*.gitignore
-*word_finder_model.pkl
+data/logs/
+
+# Model files
+*.pkl
+*.pth
+*.h5
+*.hdf5
+*.ckpt
+*.pb
+
+# Data directories (optional - uncomment if needed)
+# input/
+# input2/
+# output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env.local
+.env.*.local
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
