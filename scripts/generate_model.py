@@ -56,7 +56,7 @@ class ModelGenerator:
                 raise FileNotFoundError(f"No existe config: {self.key_words_file}")
             with open(key_words_file, "r", encoding="utf-8") as f:
                 if key_words_file:
-                    self.key_words = json.load(f)
+                    self.key_words_dict = json.load(f)
         except Exception as e:
             logger.error(f"Error cargando el modelo: {e}", exc_info=True)
             return None
@@ -67,10 +67,8 @@ class ModelGenerator:
         self.gngr: Tuple[int, int]= self.params.get("char_ngram_global", [])
         self.top_ngrams = self.params.get("top_ngrams", [])
         self.top_ngrams_fraction = self.params.get("top_ngrams_fraction", [])
-        key_words: Dict[str, List[Dict[str, str]]] = self.key_words.get("key_words", {})
-        forbidden_words_raw = self.key_words.get("forbbiden_words", [])
-        forbidden_words = [self._normalize(word) for word in forbidden_words_raw if isinstance(word, str)]
-        forbidden_words = [word for word in forbidden_words if word]  # Filtrar vacíos
+        key_words: Dict[str, List[Dict[str, str]]] = self.key_words_dict.get("key_words", {})
+        noise_words = self.key_words_dict.get("noise_words", [])
 
         logger.info(f"Rango elegido: {self.ngr}")
         try:
@@ -81,7 +79,6 @@ class ModelGenerator:
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}
-        forbidden_words : List[str] = []
         
         for field, variants in key_words.items():
             if not variants:
@@ -120,19 +117,19 @@ class ModelGenerator:
                 "grams": gmap
             })
             
-        # Generar n-gramas para forbidden_words
-        forbidden_grams_index: List[Dict[str, Any]] = []
-        for forbidden_word in forbidden_words:
-            length = len(forbidden_word)
+        # Generar n-gramas para noise_words
+        noise_grams_index: List[Dict[str, Any]] = []
+        for noise_word in noise_words:
+            length = len(noise_word)
             gmap: Dict[int, List[str]] = {}
             for n in range(n_min, n_max + 1):
-                ngrams = self._ngrams(forbidden_word, n)
+                ngrams = self._ngrams(noise_word, n)
                 gmap[n] = ngrams
             
-            forbidden_grams_index.append({
+            noise_grams_index.append({
                 "len": length,
                 "grams": gmap,
-                "word": forbidden_word
+                "word": noise_word
             })
 
         model: Dict[str, Any] = {
@@ -141,8 +138,8 @@ class ModelGenerator:
             "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
             "global_words": global_words,
-            "forbidden_words": forbidden_words,
-            "forbidden_grams_index": forbidden_grams_index,
+            "noise_words": noise_words,
+            "noise_grams_index": noise_grams_index,
             "grams_index": grams_index,
             }
             

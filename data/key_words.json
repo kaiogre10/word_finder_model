@@ -57,7 +57,6 @@
       "numero de orden",
       "orden no",
       "orden numero"
-
     ],
     "FechaDocumento": [
       "fecha",
@@ -94,8 +93,9 @@
       "p.u.d.o",
       "sku"
     ]
-},
-  "forbbiden_words": [
+  },
+  
+  "noise_words": [
     "puntuacion",
     "puntualidad",
     "estudiante",
@@ -109,6 +109,9 @@
     "punto",
     "ano",
     "titulo",
-    "repartir"
-]
+    "repartir",
+    "elestudiante",
+    "expedido",
+    "expedidopor"
+  ]
 }

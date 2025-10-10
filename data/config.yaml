@@ -23,5 +23,5 @@ params:
   top_ngrams: 150
   top_ngrams_fraction: 5.0
   
-  forb_match: 0.85
+  forb_match: 0.75
         
