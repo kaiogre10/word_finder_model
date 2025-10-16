@@ -39,23 +39,25 @@ class ModelGenerator:
     def generate_model(self, config_file: str, key_words_file: str) -> Optional[Dict[str, Any]]:
         """Lee YAML, normaliza variantes, precomputa n-gramas 2-5y guarda un pickle con toda la info necesaria para WordFinder."""
         time1 = time.perf_counter()
+        self.config_file = config_file
         self.config_dict: Dict[str, Any] = {}
         try:
             if not os.path.exists(self.config_file):
                 raise FileNotFoundError(f"No existe config: {self.config_file}")
-            with open(config_file, "r", encoding="utf-8") as f:
-                if config_file:
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                if self.config_file:
                     self.config_dict = yaml.safe_load(f)
         except Exception as e:
             logger.error(f"Error cargando el modelo: {e}", exc_info=True)
             return None 
         
-        self.key_words: Dict[str, List[str]] = {}
+        self.key_words_dict: Dict[str, List[str]] = {}
+        self.key_words_file = key_words_file
         try:
             if not os.path.exists(self.key_words_file):
                 raise FileNotFoundError(f"No existe config: {self.key_words_file}")
-            with open(key_words_file, "r", encoding="utf-8") as f:
-                if key_words_file:
+            with open(self.key_words_file, "r", encoding="utf-8") as f:
+                if self.key_words_file:
                     self.key_words_dict = json.load(f)
         except Exception as e:
             logger.error(f"Error cargando el modelo: {e}", exc_info=True)
@@ -71,6 +73,7 @@ class ModelGenerator:
         noise_words = self.key_words_dict.get("noise_words", [])
 
         logger.info(f"Rango elegido: {self.ngr}")
+        logger.info(f"Rango global elegido: {self.gngr}")
         try:
             n_min, n_max = int(self.ngr[0]), int(self.ngr[1])
         except Exception as e:
@@ -96,52 +99,17 @@ class ModelGenerator:
                 global_words.append(s)
                 variant_to_field[s] = field
                 
-        all_vectorizers, global_filter = self._train.train_all_vectorizers(key_words, global_words)
-                                                
-        grams_index: List[Dict[str, Any]] = []
-        buckets_by_len: Dict[int, List[int]] = {}
-        total_ngrams_all = 0 
-            
-        for i, w in enumerate(global_words):
-            length = len(w)
-            buckets_by_len.setdefault(length, []).append(i)
-
-            gmap: Dict[int, List[str]] = {}
-            for n in range(n_min, n_max + 1):
-                ngrams = self._ngrams(w, n)
-                gmap[n] = ngrams
-                total_ngrams_all += len(ngrams)
-
-            grams_index.append({
-                "len": length,
-                "grams": gmap
-            })
-            
-        # Generar n-gramas para noise_words
-        noise_grams_index: List[Dict[str, Any]] = []
-        for noise_word in noise_words:
-            length = len(noise_word)
-            gmap: Dict[int, List[str]] = {}
-            for n in range(n_min, n_max + 1):
-                ngrams = self._ngrams(noise_word, n)
-                gmap[n] = ngrams
-            
-            noise_grams_index.append({
-                "len": length,
-                "grams": gmap,
-                "word": noise_word
-            })
-
+        all_vectorizers, global_filter, noise_filter = self._train.train_all_vectorizers(key_words, global_words, noise_words)
+                            
         model: Dict[str, Any] = {
             "params": self.params,
+            "noise_filter": noise_filter,
             "global_filter": global_filter,
             "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
-            "global_words": global_words,
             "noise_words": noise_words,
-            "noise_grams_index": noise_grams_index,
-            "grams_index": grams_index,
-            }
+            "global_words": global_words,
+        }
             
         logger.info(f"Entradas guardadas en el modelo: {list(model.keys())}")
         logger.info(f"Modelo generado en: {time.perf_counter() - time1} s")
@@ -157,4 +125,3 @@ class ModelGenerator:
             
         except AttributeError as e:
             logger.info(f"Error costruyendo Modelo: {e}", exc_info=True)
-        

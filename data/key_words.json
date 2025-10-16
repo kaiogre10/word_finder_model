@@ -36,12 +36,6 @@
       "impuesto valor agregado",
       "impuesto al valor agregado"
     ],
-    "RFCProveedor": [
-      "rfc",
-      "registro federal de contribuyentes",
-      "regimen fiscal",
-      "razon social"
-    ],
     "FolioDocumento": [
       "folio",
       "numero de ticket",
@@ -94,7 +88,6 @@
       "sku"
     ]
   },
-  
   "noise_words": [
     "puntuacion",
     "puntualidad",

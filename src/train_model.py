@@ -14,7 +14,7 @@ class TrainModel:
         self.config = config
         self.params = config.get("params", {})
         
-    def train_all_vectorizers(self, key_words: Dict[str, List[str]], global_words: List[str]) -> Dict[str, Any]:
+    def train_all_vectorizers(self, key_words: Dict[str, List[str]], global_words: List[str], noise_words: List[str]) -> Dict[str, Any]:
         self.ngr: Tuple[int, int]  = self.params.get("char_ngram_range", [])
         self.gngr: Tuple[int, int] = self.params.get("char_ngram_global", [])
         self.top_ngrams = self.params.get("top_ngrams", [])
@@ -26,7 +26,7 @@ class TrainModel:
         global_filter = self._train_global(global_words)
         all_maps = self._train_map_vectorizar(key_words)
 
-        return all_vectorizers, global_filter
+        return all_vectorizers, global_filter, all_maps
 
     def _train_tfidftransformer(self, key_words: Dict[str, List[str]]) -> Dict[str, Any]:
         try:
@@ -48,41 +48,56 @@ class TrainModel:
                         continue
 
                     counter = CountVectorizer(
-                        strip_accents="ascii",
+                        strip_accents="unicode",
                         ngram_range=(self.ngr[0], self.ngr[1]),
                         analyzer="char_wb",
                         binary=False,
-                        vocabulary=list(vocabulary),
+                        dtype=np.float32
                     )
+                    X: np.ndarray[Any, np.float32] = counter.fit_transform(vocabulary).astype(np.float32)
+                    ngrams: List[str] = counter.get_feature_names_out()
                     
-                    tfidf_tr = TfidfTransformer(
-                        norm="l1", 
-                        use_idf=True,
-                        smooth_idf=True, 
-                        sublinear_tf=False
-                    )
+                    ngram_freqs = X.sum(axis=1).A1
+                    ngram_freqs: Dict[str, float] = {
+                        ngram: ngram_freqs[idx]
+                        for ngram, idx in ngrams
+                        }
+                    sorted_ngrams: List[Tuple[str, float]] = sorted(ngram_freqs.items(), key=lambda x: x[1], reverse=True)
+                        
 
-                    X_counts: np.ndarray[Any, np.dtype[np.uint32]] = counter.fit_transform(field_variants_normalized).astype(np.uint32)
-                    X_tfidf: np.ndarray[Any, np.dtype[np.float32]] = tfidf_tr.fit_transform(X_counts).astype(np.float32)
-                    N_tfidf = np.array(X_tfidf.shape, dtype=np.float32)
+                    logger.info(f"COUNTER: {X}")
+                    
+                    logger.info(f"SORTED_COUNTER: {sorted_ngrams}")
+                    # logger.info(f"FEATURES: {ngrams}")
+                    # logger.info(f"COUNTER SHAPE por {field}: {X.toarray().shape[1]}")
+                    # tfidf_tr = TfidfTransformer(
+                    #     norm="l1", 
+                    #     use_idf=True,
+                    #     smooth_idf=True, 
+                    #     sublinear_tf=False
+                    # )
 
-                    # logger.info(f" Numero de features: {N_tfidf[1]}")
-                    
-                    lengths = np.array([[len(w)] for w in field_variants_normalized], dtype=np.float32)
+                    # X_counts: np.ndarray[Any, np.dtype[np.uint32]] = counter.fit_transform(field_variants_normalized).astype(np.uint32)
+                    # X_tfidf: np.ndarray[Any, np.dtype[np.float32]] = tfidf_tr.fit_transform(X_counts).astype(np.float32)
+                    # N_tfidf = np.array(X_tfidf.shape, dtype=np.float32)
 
-                    X_features = sp.sparse.hstack([X_tfidf, lengths])
-                    # logger.info(f"Features fusionados1: {X_features}")
+                    # # logger.info(f" Numero de features: {N_tfidf[1]}")
                     
-                    X_featuresarr = np.asarray(X_features)
+                    # lengths = np.array([[len(w)] for w in field_variants_normalized], dtype=np.float32)
+
+                    # X_features = sp.sparse.hstack([X_tfidf, lengths])
+                    # # logger.info(f"Features fusionados1: {X_features}")
                     
-                    logger.info(f"TRANSFORMER: '{field}', features: {np.array(X_tfidf.shape[:2])}")
-                    # logger.info(f"Features fusionados: {X_featuresarr}")
+                    # X_featuresarr = np.asarray(X_features)
+                    
+                    # logger.info(f"TRANSFORMER: '{field}', features: {np.array(X_tfidf.shape[:2])}")
+                    # # logger.info(f"Features fusionados: {X_featuresarr}")
 
                     all_vectorizers[field] = {
                         "counter": counter,
-                        "tfidf": tfidf_tr,
-                        "feature_names": tfidf_tr.get_feature_names_out().tolist() + ["length"],
-                        "n_features": N_tfidf[1],
+                        # "tfidf": tfidf_tr,
+                        # "feature_names": tfidf_tr.get_feature_names_out().tolist() + ["length"],
+                        # "n_features": N_tfidf[1],
                     }
 
             # logger.info(f"N_features: {N_tfidf[1]}")
@@ -194,7 +209,7 @@ class TrainModel:
                     X_tfidfmap = tfidf_map.fit_transform(map_counts)
                     N_tfidfmap = np.array(X_tfidfmap.shape)
 
-                    logger.info(f"MAPPER: '{field}', features: {np.array(X_tfidfmap.shape)}")
+                    # logger.info(f"MAPPER: '{field}', features: {np.array(X_tfidfmap.shape)}")
                     # logger.info(f"Features fusionados: {np.array(X_tfidf.shape)}")
 
                     all_mappers[field] = {
@@ -206,7 +221,7 @@ class TrainModel:
             # logger.info(f"N_features: {N_tfidf[1]}")
             # logger.debug(f"Features puros completos: {np.array(X_tfidf.size)}")
             # logger.debug(f"Features fusionados completos: {np.array(X_counts.shape)}")
-            logger.info("MAPPER generado")
+            # logger.info("MAPPER generado")
             return all_mappers
         
         except Exception as e:
