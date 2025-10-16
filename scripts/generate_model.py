@@ -65,20 +65,14 @@ class ModelGenerator:
         
         self._train = TrainModel(config=self.config_dict, project_root=self.project_root)
         self.params: Dict[str, Any] = self.config_dict.get("params", {})
-        self.ngr: Tuple[int, int] = self.params.get("char_ngram_range", [])
-        self.gngr: Tuple[int, int]= self.params.get("char_ngram_global", [])
-        self.top_ngrams = self.params.get("top_ngrams", [])
-        self.top_ngrams_fraction = self.params.get("top_ngrams_fraction", [])
-        key_words: Dict[str, List[Dict[str, str]]] = self.key_words_dict.get("key_words", {})
+        ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", []))
+        gngr: Tuple[int, int]= tuple(self.params.get("char_ngram_global", []))
+        top_ngrams = self.params.get("top_ngrams")
+        key_words: Dict[str, List[str]] = self.key_words_dict.get("key_words", {})
         noise_words = self.key_words_dict.get("noise_words", [])
+        logger.info(f"Rango elegido: {ngr}")
+        logger.info(f"Rango global elegido: {gngr}")
 
-        logger.info(f"Rango elegido: {self.ngr}")
-        logger.info(f"Rango global elegido: {self.gngr}")
-        try:
-            n_min, n_max = int(self.ngr[0]), int(self.ngr[1])
-        except Exception as e:
-            logger.info(f"Error en rango: {e}", exc_info=True)
-                
         # Construir vocabulario normalizado
         global_words: List[str] = []
         variant_to_field: Dict[str, str] = {}

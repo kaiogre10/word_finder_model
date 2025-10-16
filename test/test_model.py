@@ -189,87 +189,77 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
     logger.info(f"QUERIES2: Total sin match: {num_no_matches}")
     logger.info(f"QUERIES: Tiempo total: {time.perf_counter()-time0:.4f}s")
     
-def test_json_poligons(wf: WordFinder, DATA_FOLDER: str):
-    try:
-    
-        time0 = time.perf_counter()
-        logger.info(f"\nBuscando archivos JSON individuales en la carpeta {DATA_FOLDER}...")
-        json_files = glob.glob(os.path.join(DATA_FOLDER, '*.json'))
+def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
+    logger.info(f"\nBuscando archivos JSON individuales en la carpeta {DATA_FOLDER2}...")
+    json_files = glob.glob(os.path.join(DATA_FOLDER2, '*.json'))
 
-        if not json_files:
-            logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER}.")
-            return
+    if not json_files:
+        logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER2}.")
+        return
 
-        total_matches = 0
-        total_words_processed = 0
+    total_matches = 0
+    total_words_processed = 0
+    proceced_files = 0
+    time0 = time.perf_counter()
+    for file_path in json_files:
+        file_name = os.path.basename(file_path)
+        logger.info(f"\n--- Procesando archivo: {file_name} ---")
         
-        for file_path in json_files:
-            logger.info(f"\n--- Procesando archivo: {os.path.basename(file_path)} ---")
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
-                polygons: List[Dict[str, Any]] = json.load(f)
-
-                # Procesar el texto tal y como viene, sin dividir en palabras ni contexto adicional
-                all_texts: List[str] = []
-                for poly_data in polygons:
-                    if poly_data is None:
-                        continue
-                    text = poly_data.get("text", "")
-                    if text and text.strip():
-                        all_texts.append(text.strip())
-
-                if not all_texts:
-                    logger.warning(f"No se encontraron textos válidos en {os.path.basename(file_path)}")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            polygons: Dict[str, Dict[str, Any]] = json.load(f)
+            all_texts: List[str] = []
+            for poly_data in polygons.values():
+                if not poly_data:
                     continue
+                text = poly_data.get("text", "")
+                if text and text.strip():
+                    all_texts.append(text.strip())
 
-                logger.info(f"Textos extraídos: {len(all_texts)}")
-                
-                for text in all_texts:
+            if not all_texts:
+                logger.warning(f"No se encontraron textos válidos en {os.path.basename(file_path)}")
+                continue
 
-                # Procesar todos los textos del documento en batch
-                    time_doc = time.perf_counter()
-                    results = wf.find_keywords(text)  # Procesamiento batch
-                    time_doc_end = time.perf_counter()
+            logger.info(f"Textos extraídos: {len(all_texts)}")
 
-                # Contar y mostrar resultados
+            matches_in_doc = 0
+            for i, text in enumerate(all_texts):
+                time1 = time.perf_counter()
+                results = wf.find_keywords(text)
+
                 if results:
-                    matches_in_doc = len([r for r in results if r])
-                    total_matches += matches_in_doc
+                    matches_in_doc += len([r for r in results if r])
+                    logger.debug(f"Coincidencias encontradas: {matches_in_doc}/{len(all_texts)}")
+                     
+                    for result in results:
+                        if result and len(result) > 0:
+                            logger.info(f"MATCH: '{text}': {result}")
 
-                    logger.info(f"Coincidencias encontradas: {matches_in_doc}/{len(all_texts)}")
-                    logger.info(f"Tiempo procesamiento: {time_doc_end - time_doc:.4f}s")
+            logger.info(f"Total de matches por documento: {matches_in_doc}/ {len(all_texts)} en {time.perf_counter() - time1:.6f}")
 
-                    try:
-                        for i, result in enumerate(results):
-                            if result and len(result) > 0:
-                                logger.info(f"Texto '{all_texts[i]}': {result}")
-                    except Exception as e:
-                        logger.error(f"Error mostrando resultados: {e}", exc_info=True)
-                else:
-                    logger.info("No se encontraron coincidencias en este documento")
+            if matches_in_doc == 0:
+                logger.info("No se encontraron coincidencias en este documento")
 
-                total_words_processed += len(all_texts)
+        total_matches += matches_in_doc
+        total_words_processed += len(all_texts)
+        proceced_files +=1
         # Resumen final
-        logger.info(f"\n=== RESUMEN FINAL JSON ===")
-        logger.info(f"Archivos procesados: {len(json_files)}")
-        logger.info(f"Total palabras procesadas: {total_words_processed}")
-        logger.info(f"Total coincidencias: {total_matches}")
-        if total_words_processed > 0:
-            porcentaje = (total_matches / total_words_processed) * 100
-            logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
-        logger.info(f"Tiempo total: {time.perf_counter() - time0:.4f}s")
+    logger.info(f"\n=== RESUMEN FINAL ===")
+    logger.info(f"Archivos procesados: {proceced_files}")
+    logger.info(f"Total palabras procesadas: {total_words_processed}")
+    logger.info(f"Total coincidencias: {total_matches}")
+    if total_words_processed > 0:
+        porcentaje = (total_matches / total_words_processed) * 100
+        logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
+    logger.info(f"Tiempo total: {time.perf_counter() - time0:.4f}s")
         
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
-    
-def test_json_lines(wf: WordFinder, DATA_FOLDER: str):
+def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
     try: 
         time0 = time.perf_counter()
-        logger.info(f"\nBuscando archivos JSON en la carpeta {DATA_FOLDER}...")
-        json_files = glob.glob(os.path.join(DATA_FOLDER, '*.json'))
+        logger.info(f"\nBuscando archivos JSON en la carpeta {DATA_FOLDER2}...")
+        json_files = glob.glob(os.path.join(DATA_FOLDER2, '*.json'))
 
         if not json_files:
-            logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER}.")
+            logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER2}.")
             return
 
         total_matches = 0
@@ -306,8 +296,7 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER: str):
                     matches_in_doc = len([r for r in results if r])
                     total_matches += matches_in_doc
                     
-                    logger.info(f"Coincidencias encontradas: {matches_in_doc}/{len(all_text)}")
-                    logger.info(f"Tiempo procesamiento: {time_doc_end - time_doc:.4f}s")
+                    logger.debug(f"Coincidencias encontradas: {matches_in_doc}/{len(all_text)}")
                     
                     # Mostrar solo las coincidencias más relevantes
                     try:
@@ -388,4 +377,3 @@ if __name__ == "__main__":
         logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
         # logger.debug("\n5. USING DEBUG METHOD:\n" + "-" * 60)
         # cleanup_project_cache(PROJECT_ROOT)
-    
