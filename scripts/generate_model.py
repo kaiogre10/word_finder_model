@@ -67,7 +67,6 @@ class ModelGenerator:
         self.params: Dict[str, Any] = self.config_dict.get("params", {})
         ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", []))
         gngr: Tuple[int, int]= tuple(self.params.get("char_ngram_global", []))
-        top_ngrams = self.params.get("top_ngrams")
         key_words: Dict[str, List[str]] = self.key_words_dict.get("key_words", {})
         noise_words = self.key_words_dict.get("noise_words", [])
         logger.info(f"Rango elegido: {ngr}")
@@ -82,10 +81,10 @@ class ModelGenerator:
                 continue
             if isinstance(variants, str):
                 variants = [variants]
-            if not isinstance(variants, (list, tuple)):
+            if not isinstance(variants, (list, tuple)): # type: ignore
                 continue
             for v in variants:
-                if not isinstance(v, str):
+                if not isinstance(v, str): # type: ignore
                     continue
                 s = self._normalize(v)
                 if not s:
@@ -106,10 +105,11 @@ class ModelGenerator:
         }
             
         logger.info(f"Entradas guardadas en el modelo: {list(model.keys())}")
-        logger.info(f"Modelo generado en: {time.perf_counter() - time1} s")
+        logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
 
-        output_path = os.path.join(self.project_root, "data", "word_finder_model.pkl")
+        output_path = os.path.join(self.project_root, "models", "wf_model.pkl")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
         try:
             with open(output_path, "wb") as f:
                 pickle.dump(model, f)

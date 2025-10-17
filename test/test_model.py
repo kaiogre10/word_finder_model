@@ -24,7 +24,7 @@ from cache_service import cleanup_project_cache
 cleanup_project_cache(PROJECT_ROOT)
 
 from src.word_finder import WordFinder
-MODEL_STD = os.path.join(PROJECT_ROOT, "data", "word_finder_model.pkl")
+MODEL_STD = os.path.join(PROJECT_ROOT, "models", "wf_model.pkl")
 DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
 DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input2")
 
@@ -207,50 +207,37 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)
-            all_texts: List[str] = []
-            for poly_data in polygons.values():
+            matches_in_doc = 0
+            time1 = time.perf_counter()
+            for poly_id, poly_data in polygons.items():
                 if not poly_data:
                     continue
                 text = poly_data.get("text", "")
                 if text and text.strip():
-                    all_texts.append(text.strip())
+                    results = wf.find_keywords(text.strip())
+                    if results:
+                        matches_in_doc += len([r for r in results if r])
+                        for result in results:
+                            if result and len(result) > 0:
+                                logger.info(f"MATCH: {poly_id} '{text}' | {result}")
 
-            if not all_texts:
-                logger.warning(f"No se encontraron textos válidos en {os.path.basename(file_path)}")
-                continue
-
-            logger.info(f"Textos extraídos: {len(all_texts)}")
-
-            matches_in_doc = 0
-            for i, text in enumerate(all_texts):
-                time1 = time.perf_counter()
-                results = wf.find_keywords(text)
-
-                if results:
-                    matches_in_doc += len([r for r in results if r])
-                    logger.debug(f"Coincidencias encontradas: {matches_in_doc}/{len(all_texts)}")
-                     
-                    for result in results:
-                        if result and len(result) > 0:
-                            logger.info(f"MATCH: '{text}': {result}")
-
-            logger.info(f"Total de matches por documento: {matches_in_doc}/ {len(all_texts)} en {time.perf_counter() - time1:.6f}")
+            logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s")
 
             if matches_in_doc == 0:
                 logger.info("No se encontraron coincidencias en este documento")
 
         total_matches += matches_in_doc
-        total_words_processed += len(all_texts)
+        total_words_processed += len(polygons.items())
         proceced_files +=1
         # Resumen final
     logger.info(f"\n=== RESUMEN FINAL ===")
     logger.info(f"Archivos procesados: {proceced_files}")
-    logger.info(f"Total palabras procesadas: {total_words_processed}")
-    logger.info(f"Total coincidencias: {total_matches}")
+    logger.info(f"Total coincidencias: {total_matches} / {total_words_processed}")
     if total_words_processed > 0:
         porcentaje = (total_matches / total_words_processed) * 100
         logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
-    logger.info(f"Tiempo total: {time.perf_counter() - time0:.4f}s")
+    total_time = time.perf_counter() - time0
+    logger.info(f"Tiempo total: {total_time:.4}s, tiempo promedio: {total_time/proceced_files:.4f}s")
         
 def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
     try: 

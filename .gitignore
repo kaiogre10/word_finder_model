@@ -10,6 +10,7 @@ logs/
 *idea
 input2/
 input/
+models/
 *pkl
 *.gitignore
 *word_finder_model.pkl
