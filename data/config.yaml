@@ -1,5 +1,4 @@
 params:
-  char_ngram_range: [3, 4]
   char_ngram_global: [3, 4]
   top_ngrams_fraction: 5
   threshold_similarity: 0.91

@@ -6,7 +6,7 @@ import unicodedata
 import json
 import yaml
 import time
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Optional
 from src.train_model import TrainModel
 
 logger = logging.getLogger(__name__)
@@ -65,12 +65,8 @@ class ModelGenerator:
         
         self._train = TrainModel(config=self.config_dict, project_root=self.project_root)
         self.params: Dict[str, Any] = self.config_dict.get("params", {})
-        ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", []))
-        gngr: Tuple[int, int]= tuple(self.params.get("char_ngram_global", []))
         key_words: Dict[str, List[str]] = self.key_words_dict.get("key_words", {})
         noise_words = self.key_words_dict.get("noise_words", [])
-        logger.info(f"Rango elegido: {ngr}")
-        logger.info(f"Rango global elegido: {gngr}")
 
         # Construir vocabulario normalizado
         global_words: List[str] = []
@@ -92,13 +88,12 @@ class ModelGenerator:
                 global_words.append(s)
                 variant_to_field[s] = field
                 
-        all_vectorizers, global_filter, noise_filter = self._train.train_all_vectorizers(key_words, global_words, noise_words)
+        global_filter, noise_filter = self._train.train_all_vectorizers(global_words, noise_words)
                             
         model: Dict[str, Any] = {
             "params": self.params,
             "noise_filter": noise_filter,
             "global_filter": global_filter,
-            "all_vectorizers": all_vectorizers,
             "variant_to_field": variant_to_field,
             "noise_words": noise_words,
             "global_words": global_words,

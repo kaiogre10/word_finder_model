@@ -2,8 +2,7 @@ import os
 import logging
 import pickle
 from typing import List, Any, Dict, Optional, Tuple
-from cleantext import clean
-import scipy as sp
+from cleantext import clean  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -11,13 +10,12 @@ class WordFinder:
     def __init__(self, model_path: str, project_root: str):
         self.model: Dict[str, Any] = self._load_model(model_path)
         self.project_root = project_root
-        self._apply_active_model()
+        self.params = self.model.get("params", {})
         self.global_words: List[str] = self.model.get("global_words", [])
         self.variant_to_field = self.model.get("variant_to_field", {})
         self.noise_words = self.model.get("noise_words", [])
         self.noise_filter = self.model.get("noise_filter", {})
         self.global_filter = self.model.get("global_filter", {})
-        self.all_vectorizers = self.model.get("all_vectorizers", {})
 
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         try:
@@ -25,34 +23,23 @@ class WordFinder:
                 raise FileNotFoundError(f"Modelo no encontrado en {model_path}")
             with open(model_path, "rb") as f:
                 self.model = pickle.load(f)
-            if not isinstance(self.model, dict):
-                raise ValueError("El pickle no tiene el formato esperado (Dict).")
+            if not isinstance(self.model, dict):  # type: ignore
+                raise ValueError("El pickle no tiene el formato esperado (dict).")
             return self.model
         except Exception as e:
             logger.error(f"Error al cargar el modelo {e}", exc_info=True)
             raise
 
-    def _apply_active_model(self):
-        try:
-            self.params: Dict[str, Any] = self.model.get("params", {})
-        except Exception as e:
-            logger.warning(f"Error en APPLY_MODEL: {e}", exc_info=True)
-            return None
-
     def find_keywords(self, text: List[str] | str, threshold: Optional[float] = None) -> Optional[List[Dict[str, Any]]]:
         try:
-            self.threshold: float = self.params.get("threshold_similarity", {})
-            self.ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_range", []))
+            self.threshold: float = self.params.get("threshold_similarity")
             self.gngr: Tuple[int, int] = tuple(self.params.get("char_ngram_global", []))
-            self.thresholds_by_len: List[Tuple[int, int, float]] = [tuple(item) for item in
-                                                                    self.params.get("thresholds_by_len", [])]
-            self.weights_by_n: List[Tuple[int, int, float]] = [tuple(item) for item in
-                                                               self.params.get("weights_by_n", [])]
-            self.window_flex = self.params.get("window_flexibility", 3)
-            self.global_filter_threshold = float(self.params.get("global_filter_threshold", 0.0))
-            self.forb_match: float = self.params.get("forb_match", {})
+            self.thresholds_by_len: List[Tuple[int, int, float]] = [tuple(item) for item in self.params.get("thresholds_by_len", [])]
+            self.weights_by_n: List[Tuple[int, int, float]] = [tuple(item) for item in self.params.get("weights_by_n", [])]
+            self.window_flex = self.params.get("window_flexibility")
+            self.global_filter_threshold = float(self.params.get("global_filter_threshold"))
+            self.forb_match: float = self.params.get("forb_match")
 
-            self.ngrams_scaled: List[Tuple[str, float]] = self.all_vectorizers.get("ngrams_scaled", [])
             self.global_ngrams: List[Tuple[str, float]] = self.global_filter.get("global_ngrams", [])
             self.noise_grams: List[Tuple[str, float]] = self.noise_filter.get("noise_grams", [])
 
@@ -82,24 +69,25 @@ class WordFinder:
                     if min_w > len(q):
                         continue
                     max_w = min(len(q), cand_len + self.window_flex)
+                    grams_cand = self.global_ngrams[i]
 
-                    # Obtener el campo asociado a esta palabra candidata
-                    field = self.variant_to_field.get(cand)
-                    if not field:
-                        continue
+                    if isinstance(grams_cand, dict):
+                        pass
 
-                    # Obtener los n-gramas escalados para este campo
-                    field_vectorizer = self.all_vectorizers.get(field, {})
-                    ngrams_scaled = field_vectorizer.get("ngrams_scaled", [])
-
-                    # Normalizar los n-gramas a un formato compatible con _score_binary_cosine_multi_n
-                    grams_cand = {}
-                    for gram, _ in ngrams_scaled:
-                        grams_cand.setdefault(len(gram), set()).add(gram)
-
-                    # Si no hay n-gramas escalados para este campo, construir n-gramas al vuelo
-                    if not grams_cand:
-                        grams_cand = self._build_query_grams(cand)
+                    else:
+                        try:
+                            # list/tuple of ngram strings -> group by length
+                            if isinstance(grams_cand, (list, tuple, set)) and all(
+                                    isinstance(x, str) for x in grams_cand):
+                                normalized: Dict[int, set[str]] = {}
+                                for g in grams_cand:
+                                    normalized.setdefault(len(g), set()).add(g)
+                                grams_cand = normalized
+                            else:
+                                # Unknown format (e.g. (word, freq) or other) -> build on the fly
+                                grams_cand = self._build_query_grams(cand)
+                        except Exception:
+                            grams_cand = self._build_query_grams(cand)
 
                     try:
                         for w in range(min_w, max_w + 1):
@@ -111,7 +99,6 @@ class WordFinder:
                                 # Solo asignar similitud perfecta si es la misma palabra completa (misma longitud)
                                 if sub == cand and len(sub) == cand_len:
                                     ngram_score: float = 1.0
-
                                 else:
                                     ngram_score: float = self._score_binary_cosine_multi_n(grams_cand, grams_sub)
                                     len_ratio = max(len(sub), cand_len) / max(1, min(len(sub), cand_len))
@@ -145,7 +132,7 @@ class WordFinder:
     def _build_query_grams(self, q: str) -> Dict[int, set[str]]:
         """Construye n-gramas de la consulta"""
         gq: Dict[int, set[str]] = {}
-        for n in range(self.ngr[0], self.ngr[1] + 1):
+        for n in range(self.gngr[0], self.gngr[1] + 1):
             gq[n] = set(self._ngrams(q, n))
         return gq
 
@@ -181,7 +168,7 @@ class WordFinder:
         num = 0.0
         den = 0.0
 
-        for n in range(self.ngr[0], self.ngr[1] + 1):
+        for n in range(self.gngr[0], self.gngr[1] + 1):
             A = grams_a.get(n, set())
             B = grams_b.get(n, set())
             w: float = self._get_weight_by_n(n)
@@ -199,22 +186,12 @@ class WordFinder:
                         max_sim = sim
                 soft_intersection += max_sim
 
-            # Normalizar soft_intersection para que no exceda len(A)
-            soft_intersection = min(soft_intersection, float(len(A)))
-
-            cosine_score = self._binary_cosine(len(A), len(B), soft_intersection)
-            # Asegurar que el coseno esté en [0, 1]
-            cosine_score = min(1.0, max(0.0, cosine_score))
-
-            num += w * cosine_score
+            num += w * self._binary_cosine(len(A), len(B), soft_intersection)
             den += w
 
         if den <= 0.0:
             return 0.0
-
-        final_score = num / den
-        # Clamp final para garantizar [0, 1]
-        return min(1.0, max(0.0, final_score))
+        return num / den
 
     def _get_weight_by_n(self, n: int, default: float = 1.0) -> float:
         for start, end, value in self.weights_by_n:
@@ -234,16 +211,19 @@ class WordFinder:
                 return False
 
             # Transforma el texto en matriz de n-gramas usando el vocabulario global
-            X: sp.sparse.spmatrix = global_counter.transform([" ".join(grams)])
+            X = global_counter.transform([" ".join(grams)])
             # Suma de frecuencias normalizadas
-            total: np.ndarray[Any, np.dtype[np.float32]] = X.sum()
+            total = X.sum()
             score = total / max(1, len(grams))
 
             if score < self.global_filter_threshold:
-                logger.debug(f"Descartado global '{q}': Score={score:.4f}")
+                logger.debug(
+                    f"Texto descartado por filtro global. Score={score:.4f}, threshold={self.global_filter_threshold}, ngrams={grams}")
                 return False
-
-            return True
+            else:
+                logger.debug(
+                    f"Texto aceptado por filtro global. Score={score:.4f}, threshold={self.global_filter_threshold}, ngrams={grams}")
+                return score > self.global_filter_threshold
 
         except Exception as e:
             logger.error("Error en filtro global: %s", e, exc_info=True)
@@ -291,7 +271,7 @@ class WordFinder:
                                 similarity *= penalty
 
                         if similarity > self.forb_match:
-                            logger.info(f"RUIDO '{candidate}': n-gramas: {grams_sub}, Similitud: {similarity:.4f},")
+                            logger.info(f"RUIDO: '{candidate}', n-gramas: {grams_sub}, Similitud: {similarity:.4f},")
                             return True
 
             return False
@@ -300,9 +280,6 @@ class WordFinder:
             return False
 
     def _clean_text(self, text: str) -> str:
-        if not text:
-            return ""
-
         s: str = clean(
             text,
             clean_all=False,
