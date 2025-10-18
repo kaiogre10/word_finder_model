@@ -6,7 +6,8 @@
       "importe total",
       "importe a pagar",
       "importe total a pagar",
-      "cantidad a pagar"
+      "cantidad a pagar",
+      "cantidad total a pagar"
     ],
     "Subtotal": [
       "subtotal",
@@ -17,6 +18,7 @@
       "total de piezas",
       "total de unidades",
       "no de articulos",
+      "numero de piezas",
       "cantidad de articulos",
       "no articulos",
       "no de piezas",
@@ -99,7 +101,6 @@
     "punto",
     "punt",
     "puntillas",
-    "pun",
     "puesto",
     "amarillo",
     "punct",
@@ -109,6 +110,12 @@
     "repartir",
     "elestudiante",
     "expedido",
-    "expedidopor"
+    "expedidopor",
+    "diam",
+    "diametro",
+    "negro",
+    "cortador",
+    "unicel",
+    "unitalla"
   ]
 }

@@ -29,14 +29,13 @@ DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
 DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input2")
 
 try:    
-    wf: WordFinder = WordFinder(MODEL_STD, PROJECT_ROOT)
+    wf: WordFinder = WordFinder(MODEL_STD)
 except Exception as e:
     logger.info(f"Error estableciendo root: {e}", exc_info=True)
 
 try:
     with open(MODEL_STD, "rb") as f:
         model = pickle.load(f)
-    logger.info("'grams_index' en model: %s", "grams_index" in model)
 except Exception as e:
     logger.info(f"Error: {e}", exc_info=True)
 base_queries: List[str] = [
@@ -111,18 +110,16 @@ def log_search_results(res: Optional[List[Dict[str, Any]]], q: List[str], params
     except Exception as e:
         logger.info(f"Error en log: {e}", exc_info=True)
 
-def run_queries(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True):
+def run_queries(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True):
     num_matches = 0
     num_no_matches = 0
     matches: List[Tuple[str, Dict[str, Any]]] = []
     no_matches: List[str] = []
-    dudosos: List[Tuple[str, Dict[str, Any]]] = []
 
     time0 = time.perf_counter()
     try:
         for q in base_queries2:
             res: Optional[List[Dict[str, Any]]] = wf.find_keywords(q)
-            used = wf._active
             if res:
                 num_matches += 1
                 for r in (res if isinstance(res, list) else [res]):
@@ -131,9 +128,6 @@ def run_queries(base_queries2: List[str], wf: WordFinder, show_no_match: bool = 
                     word_found = r.get("word_found")
                     score = r.get("similarity")
                     matches.append((q, r))
-                    thr = wf._len_threshold(len(word_found))
-                    if show_dudosos and (score < thr + 0.05 and score > thr - 0.05):
-                        dudosos.append((q, r))
                 log_search_results(res, q, params)
             else:
                 num_no_matches += 1
@@ -146,22 +140,19 @@ def run_queries(base_queries2: List[str], wf: WordFinder, show_no_match: bool = 
     porcentaje: float = (100.00/len(base_queries)) * num_matches
     logger.info(f"QUERIES1: Resumen final: {num_matches}/{len(base_queries)} matches")
     logger.info(f"QUERIES1: Porcentaje de coincidencia de palabras: {porcentaje:.2f}%")
-    logger.info(f"QUERIES1: Total dudosos: {len(dudosos)}")
     logger.info(f"QUERIES1: Total sin match: {num_no_matches}")
     logger.info(f"QUERIES1: Tiempo total: {time.perf_counter()-time0:.2f}s")
 
-def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True, show_dudosos: bool = True):
+def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool = True):
     num_matches = 0
     num_no_matches = 0
     matches: List[Tuple[str, Dict[str, Any]]] = []
     no_matches: List[str] = []
-    dudosos: List[Tuple[str, Dict[str, Any]]] = []
 
     time0 = time.perf_counter()
     try:
         for q in base_queries2:
             res: Optional[List[Dict[str, Any]]] = wf.find_keywords(q)
-            used = wf._active
             if res:
                 num_matches += 1
                 for r in (res if isinstance(res, list) else [res]):
@@ -170,9 +161,7 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
                     word_found = r.get("word_found")
                     score = r.get("similarity")
                     matches.append((q, r))
-                    thr = wf._len_threshold(len(word_found))
-                    if show_dudosos and (score < thr + 0.05 and score > thr - 0.05):
-                        dudosos.append((q, r))
+
                 log_search_results(res, q, params)
             else:
                 num_no_matches += 1
@@ -185,7 +174,6 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
     porcentaje: float = (100.00/len(base_queries2)) * num_matches
     logger.info(f"QUERIES2: Resumen final: {num_matches}/{len(base_queries2)}matches")
     logger.info(f"QUERIES2: Porcentaje de coincidencia de palabras: {porcentaje:.2f}%")
-    logger.info(f"QUERIES2: Total dudosos: {len(dudosos)}")
     logger.info(f"QUERIES2: Total sin match: {num_no_matches}")
     logger.info(f"QUERIES: Tiempo total: {time.perf_counter()-time0:.4f}s")
     
@@ -315,33 +303,33 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
-    wf = WordFinder(MODEL_STD, PROJECT_ROOT)
+    wf = WordFinder(MODEL_STD)
     # log_model_summary(wf)
-    # try:
-    #     test_json_lines(wf, DATA_FOLDER)
-    # except Exception as e:
-    #     logger.error(f"Error testeando: {e}", exc_info=True)
+    #try:
+     #    test_json_lines(wf, DATA_FOLDER)
+    #except Exception as e:
+     #    logger.error(f"Error testeando: {e}", exc_info=True)
 
     try:
-        test_json_poligons(wf, DATA_FOLDER2)
+       test_json_poligons(wf, DATA_FOLDER2)
     except Exception as e:
         logger.error(f"Error testeando: {e}", exc_info=True)
-        # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
-        # run_queries(base_queries, wf)
-        # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
-        # run_queries2(base_queries2, wf)
 
-        # # Prueba con diferentes inputs
-        text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
-        for q in text:
-            try:
-                result = wf.find_keywords(q)
-                if result is None:
-                    logger.warning("error")
-                logger.debug(f"Query: '{q}'"
-                f"Result: {result}")
-            except Exception as e:
-                logger.error(f"Error en Test: {e}", exc_info=True)
+    # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+    # run_queries(base_queries, wf)
+    # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
+    # run_queries2(base_queries2, wf)
+
+        # Prueba con diferentes inputs
+#    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
+        # total_r = 0
+        # for q in text:
+        #     result = wf.find_keywords(q)
+        #     total_r += 1
+        #     if result:
+        #         logger.debug(f"Texto'{q}': {result}")
+        # logger.info(f"Total: {total_r}")
+        # logger.warning("error")
 
         # # logger.debug("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
 
@@ -361,6 +349,6 @@ if __name__ == "__main__":
         #     )
 
         # logger.debug("\n" + "="*80 + "\nEND OF RETURN VALUE TESTING\n" + "="*80)
-        logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
+    logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
         # logger.debug("\n5. USING DEBUG METHOD:\n" + "-" * 60)
         # cleanup_project_cache(PROJECT_ROOT)

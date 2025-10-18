@@ -98,8 +98,7 @@ class ModelGenerator:
             "noise_words": noise_words,
             "global_words": global_words,
         }
-            
-        logger.info(f"Entradas guardadas en el modelo: {list(model.keys())}")
+
         logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
 
         output_path = os.path.join(self.project_root, "models", "wf_model.pkl")

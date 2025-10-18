@@ -1,6 +1,7 @@
 params:
   char_ngram_global: [3, 4]
-  top_ngrams_fraction: 5
+  char_ngram_noise: [2, 3]
+  top_ngrams_fraction: 4
   threshold_similarity: 0.91
   global_filter_threshold: 0.90
   thresholds_by_len:
@@ -21,3 +22,4 @@ params:
 
   window_flexibility: 3
   forb_match: 0.90
+  max_results_per_query: 3
