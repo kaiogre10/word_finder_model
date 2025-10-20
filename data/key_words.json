@@ -33,11 +33,6 @@
       "articulos vendidos",
       "atriculos totales"
     ],
-    "MontoIVAGeneral": [
-      "iva",
-      "impuesto valor agregado",
-      "impuesto al valor agregado"
-    ],
     "FolioDocumento": [
       "folio",
       "numero de ticket",

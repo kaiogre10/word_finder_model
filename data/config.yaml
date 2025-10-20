@@ -1,7 +1,7 @@
 params:
   char_ngram_global: [3, 4]
   char_ngram_noise: [2, 3]
-  top_ngrams_fraction: 4
+  top_ngrams_fraction: 5
   threshold_similarity: 0.91
   global_filter_threshold: 0.90
   thresholds_by_len:

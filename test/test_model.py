@@ -310,15 +310,15 @@ if __name__ == "__main__":
     #except Exception as e:
      #    logger.error(f"Error testeando: {e}", exc_info=True)
 
-    try:
-       test_json_poligons(wf, DATA_FOLDER2)
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
+#    try:
+ #      test_json_poligons(wf, DATA_FOLDER2)
+  #  except Exception as e:
+   #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
-    # run_queries(base_queries, wf)
-    # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
-    # run_queries2(base_queries2, wf)
+    logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+    run_queries(base_queries, wf)
+    logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
+    run_queries2(base_queries2, wf)
 
         # Prueba con diferentes inputs
 #    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
