@@ -1,6 +1,8 @@
 import os
+import datetime
 import logging
 import pickle
+from datetime import datetime
 from typing import List, Any, Dict, Optional, Tuple
 from cleantext import clean  # type: ignore
 
@@ -9,6 +11,7 @@ logger = logging.getLogger(__name__)
 class WordFinder:
     def __init__(self, model_path: str):
         self.model: Dict[str, Any] = self._load_model(model_path)
+        self.wf_path = "C:\word_finder_model\src\word_finder.py"
         self.params = self.model.get("params", {})
         self.global_words: List[str] = self.model.get("global_words", [])
         self.variant_to_field = self.model.get("variant_to_field", {})
@@ -28,6 +31,10 @@ class WordFinder:
         self.max_results: int = self.params.get("max_results_per_query")
         self.global_counter = self.global_filter.get("global_counter", None)
         self.global_vocab = self.global_filter.get("global_vocab", None)
+        self.model_time = self.model.get("model_time")
+        timestamp_model = os.path.getmtime(self.wf_path)
+        fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
+        logger.critical(f"FECHA DE GENERACIÓN DEL MODELO: {self.model_time}, FECHA DEL SCRIPT WORD_FINDER.PY: {fecha_wf}")
 
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         try:
@@ -54,6 +61,10 @@ class WordFinder:
 
             results: List[Dict[str, Any]] = []
             for s in text:
+
+                if s is None:
+                    return None
+
                 q = self._clean_text(s)
                 if not q:
                     continue
@@ -342,18 +353,30 @@ class WordFinder:
             logger.error(f"Error verificando palabra prohibida: {e}", exc_info=True)
             return False
 
-    def _clean_text(self, text: str) -> str:
-        s: str = clean(
-            text,
-            clean_all=False,
-            extra_spaces=True,
-            stemming=False,
-            stopwords=False,
-            lowercase=True,
-            numbers=True,
-            punct=True,
-        )
-        return s
+    def _clean_text(self, s: str) -> Optional[str]:
+        try:
+            if s is None:
+                return None
+
+            q = clean(
+                s,
+                clean_all=False,
+                extra_spaces=True,
+                stemming=False,
+                stopwords=False,
+                lowercase=True,
+                numbers=True,
+                punct=True,
+            )
+
+            if q is None:
+                return None
+
+            return q
+
+        except Exception as e:
+            logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
+        return None
 
     def get_model_info(self) -> Dict[str, Any]:
         return {

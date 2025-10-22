@@ -6,6 +6,7 @@ import unicodedata
 import json
 import yaml
 import time
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from src.train_model import TrainModel
 
@@ -89,6 +90,9 @@ class ModelGenerator:
                 variant_to_field[s] = field
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(global_words, noise_words)
+
+        now = datetime.now()
+        model_time = now.isoformat()
                             
         model: Dict[str, Any] = {
             "params": self.params,
@@ -97,6 +101,7 @@ class ModelGenerator:
             "variant_to_field": variant_to_field,
             "noise_words": noise_words,
             "global_words": global_words,
+            "model_time": model_time,
         }
 
         logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
@@ -108,7 +113,7 @@ class ModelGenerator:
             with open(output_path, "wb") as f:
                 pickle.dump(model, f)
                 
-            logger.info("Modelo (n-gramas binarios) guardado en: %s", output_path)
+            logger.critical(f"Modelo 'WORD_FINDER' generado el {model_time} guardado en: %s", output_path)
             return model
             
         except AttributeError as e:
