@@ -49,14 +49,6 @@
       "orden no",
       "orden numero"
     ],
-    "FechaDocumento": [
-      "fecha",
-      "hora",
-      "semana",
-      "mes",
-      "año",
-      "dia"
-    ],
     "NombreCliente": [
       "cliente",
       "usuario",
@@ -80,6 +72,8 @@
       "precio",
       "precio unitario",
       "producto",
+      "ps",
+      "pu",
       "p unit",
       "p.u.c.d",
       "p.u.d.o",
@@ -89,9 +83,6 @@
   "noise_words": [
     "puntuacion",
     "puntualidad",
-    "estudiante",
-    "italiano",
-    "montano",
     "papeleria",
     "punto",
     "punt",
@@ -100,16 +91,14 @@
     "amarillo",
     "punct",
     "punto",
-    "ano",
     "titulo",
     "repartir",
     "elestudiante",
     "expedido",
     "expedidopor",
-    "diam",
-    "diametro",
     "negro",
     "cortador",
+    "pun",
     "unicel",
     "unitalla"
   ]
