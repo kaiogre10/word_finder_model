@@ -37,7 +37,6 @@ if __name__ == "__main__":
         config_file = CONFIG_FILE
         key_words_file = KEY_WORDS
         generator = ModelGenerator(config_file, PROJECT_ROOT, key_words_file)
-        generator.generate_model(config_file, key_words_file)
         cleanup_project_cache(PROJECT_ROOT)
         logger.info("Proceso terminado correctamente.")
     except Exception as e:

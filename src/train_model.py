@@ -12,19 +12,47 @@ logger = logging.getLogger(__name__)
 class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
-        self.config = config
-        self.params = config.get("params", {})
-        self.gngr: Tuple[int, int] = tuple(self.params.get("char_ngram_global", []))
-        self.ngr: Tuple[int, int] = tuple(self.params.get("char_ngram_noise", []))
-        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction")
+        self.params = config
+        self.gngr: Tuple[int, int] = self.params["char_ngram_global"]
+        self.ngr: Tuple[int, int] = self.params["char_ngram_noise"]
+        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", {})
         
-    def train_all_vectorizers(self, global_words: List[str], noise_words: List[str]):
+    def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str]):
+        # Construir vocabulario normalizado y mapeo variant_to_field
+        field_conversion_map_list: List[Dict[str, int]] = self.params.get("field_conversion_map", [])
+        field_conversion_map = {k: v for d in field_conversion_map_list for k, v in d.items()}
+        
+        global_words: List[str] = []
+        variant_to_field: Dict[str, int] = {}
+
+        for field, variants in key_words.items():
+            if not variants:
+                continue
+            if isinstance(variants, str):
+                variants = [variants]
+            if not isinstance(variants, (list, tuple)):
+                continue
+
+            field_id = field_conversion_map.get(field)
+            if field_id is None:
+                logger.warning(f"El campo '{field}' no se encontró en 'field_conversion_map' y será omitido.")
+                continue
+
+            for v in variants:
+                if not isinstance(v, str):
+                    continue
+                s = self._normalize(v)
+                if not s:
+                    continue
+                global_words.append(s)
+                variant_to_field[s] = field_id
+        
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
         logger.info(f"Rango global elegido: {self.gngr}")
         logger.info(f"Rango noise elegido: {self.ngr}")
 
-        return  global_filter, noise_filter
+        return global_filter, noise_filter, global_words, variant_to_field
     
     def _train_global(self, global_words: List[str]):
         try:
@@ -45,14 +73,9 @@ class TrainModel:
                 gngrams: List[str] = list(global_counter.get_feature_names_out(Xg_counts))
 
                 freqs: np.ndarray[Any, np.dtype[np.float32]] = Xg_counts.sum(axis=0).A1
-                # ngram_freqs: Dict[str, float] = {
-                #     ngram: float(freq)
-                #     for ngram, freq in zip(gngrams, freqs)
-                # }
-                # sorted_ngrams: List[Tuple[str, float]] = sorted(ngram_freqs.items(), key=lambda x: x[1], reverse=True)
 
                 scaler = MaxAbsScaler()
-                freq_array: np.ndarray[Any, np.dtype[np.float32]] = freqs.reshape(-1, 1)                    
+                freq_array: np.ndarray[Any, np.dtype[np.float32]] = freqs.reshape(-1, 1)
                 scaled_freqs: np.ndarray[Any, np.dtype[np.float32]] = scaler.fit_transform(freq_array).ravel().astype(np.float32)
 
                 gngram_scaled: Dict[str, float] = {
@@ -103,17 +126,12 @@ class TrainModel:
                     dtype=np.float32
                 )
                 count_matrix: spmatrix = noise_counter.fit_transform(noise_vocab)
-                nngrams: spmatrix = noise_counter.get_feature_names_out(count_matrix)
+                nngrams: List[str] = noise_counter.get_feature_names_out(count_matrix)
                 freqs: np.ndarray[Any, np.dtype[np.float32]] = count_matrix.sum(axis=0).A1
-                # ngram_freqs: Dict[str, float] = {
-                #     ngram: float(freq)
-                #     for ngram, freq in zip(nngrams, freqs)
-                # }
-                # sorted_ngrams: List[Tuple[str, float]] = sorted(ngram_freqs.items(), key=lambda x: x[1], reverse=True)
 
                 scaler = MaxAbsScaler()
                 freq_array: np.ndarray[Any, np.dtype[np.float32]] = freqs.reshape(-1, 1)
-                scaled_freqs: np.ndarray[Any, np.dtype[np.float32]] = scaler.fit_transform(freq_array).ravel().astype(np.float32)  # -> 1D array de long n_ngrams
+                scaled_freqs: np.ndarray[Any, np.dtype[np.float32]] = scaler.fit_transform(freq_array).ravel().astype(np.float32)
 
                 nngram_scaled: Dict[str, float] = {
                     ngram: float(s)

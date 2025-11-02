@@ -29,6 +29,7 @@ class WordFinder:
         self.window_flex = self.params.get("window_flexibility")
         self.forb_match: float = self.params.get("forb_match")
         self.max_results: int = self.params.get("max_results_per_query")
+        self.field_conversion_map = self.params.get("field_conversion_map", {})
         self.global_counter = self.global_filter.get("global_counter", None)
         self.global_vocab = self.global_filter.get("global_vocab", None)
         self.model_time = self.model.get("model_time")
@@ -380,5 +381,6 @@ class WordFinder:
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
-            "noise_words": self.noise_words
+            "noise_words": self.noise_words,
+            "field_conversion_map": self.field_conversion_map
         }

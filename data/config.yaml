@@ -23,3 +23,12 @@ params:
   window_flexibility: 3
   forb_match: 0.90
   max_results_per_query: 3
+
+  field_conversion_map:
+    - 'noise_words': 0
+    - 'MontoTotalDocumento': 1
+    - 'TotalProductos': 2
+    - 'Subtotal': 3
+    - 'FolioDocumento': 4
+    - "NombreCliente": 5
+    - "HeaderWords": 6
