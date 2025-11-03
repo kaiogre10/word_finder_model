@@ -90,12 +90,12 @@ class TrainModel:
 
                 logger.info(f"TOP_GLOBAL: {np.array(global_ngrams).shape}")
                 
-                logger.debug(f"Frecuencias globales ordenadas: {gngrams_scaled}")
+                logger.info(f"Frecuencias globales ordenadas: {gngrams_scaled}")
 
                 W = np.array(gngrams_scaled)
                 Z = np.array(global_ngrams)
-                logger.debug(f"TOP GLOBAL: {np.array(Z)}, SORTED GLOBAL: {np.array(W)}")
-                logger.debug(f"TOP GLOBAL: {global_ngrams}")
+                logger.info(f"TOP GLOBAL: {np.array(Z)}, SORTED GLOBAL: {np.array(W)}")
+                logger.info(f"TOP GLOBAL: {global_ngrams}")
 
                 global_filter: Dict[str, Any] = {
                     "global_counter": global_counter,
@@ -140,8 +140,8 @@ class TrainModel:
 
                 noise_grams: List[Tuple[str, float]] = sorted(nngram_scaled.items(), key=lambda x: x[1], reverse=True)
 
-                logger.debug(f"SCALED_NOISE: {np.array(noise_grams).shape}")
-                logger.debug(f"Frecuencias ruidosas: {noise_grams}")
+                logger.info(f"SCALED_NOISE: {np.array(noise_grams).shape}")
+                logger.info(f"Frecuencias ruidosas: {noise_grams}")
 
                 noise_filter: Dict[str, Any] = {
                     "noise_counter": noise_counter,
