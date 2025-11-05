@@ -49,8 +49,8 @@ class TrainModel:
         
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
-        logger.info(f"Rango global elegido: {self.gngr}")
-        logger.info(f"Rango noise elegido: {self.ngr}")
+        logger.debug(f"Rango global elegido: {self.gngr}")
+        logger.debug(f"Rango noise elegido: {self.ngr}")
 
         return global_filter, noise_filter, global_words, variant_to_field
     
@@ -88,14 +88,14 @@ class TrainModel:
 
                 global_ngrams: List[Tuple[str, float]] = gngrams_scaled[:top_grams]
 
-                logger.info(f"TOP_GLOBAL: {np.array(global_ngrams).shape}")
+                logger.warning(f"TOP_GLOBAL: {np.array(global_ngrams).shape}")
                 
-                logger.info(f"Frecuencias globales ordenadas: {gngrams_scaled}")
+                logger.debug(f"Frecuencias globales ordenadas: {gngrams_scaled}")
 
                 W = np.array(gngrams_scaled)
                 Z = np.array(global_ngrams)
-                logger.info(f"TOP GLOBAL: {np.array(Z)}, SORTED GLOBAL: {np.array(W)}")
-                logger.info(f"TOP GLOBAL: {global_ngrams}")
+                logger.debug(f"TOP GLOBAL: {np.array(Z)}, SORTED GLOBAL: {np.array(W)}")
+                logger.debug(f"TOP GLOBAL: {global_ngrams}")
 
                 global_filter: Dict[str, Any] = {
                     "global_counter": global_counter,
@@ -104,7 +104,7 @@ class TrainModel:
                     "global_vocab": global_vocab
                 }
 
-                logger.info("GLOBAL FILTER generado")
+                logger.warning("GLOBAL FILTER generado")
                 return global_filter
 
         except Exception as e:
@@ -140,8 +140,8 @@ class TrainModel:
 
                 noise_grams: List[Tuple[str, float]] = sorted(nngram_scaled.items(), key=lambda x: x[1], reverse=True)
 
-                logger.info(f"SCALED_NOISE: {np.array(noise_grams).shape}")
-                logger.info(f"Frecuencias ruidosas: {noise_grams}")
+                logger.warning(f"SCALED_NOISE: {np.array(noise_grams).shape}")
+                logger.debug(f"Frecuencias ruidosas: {noise_grams}")
 
                 noise_filter: Dict[str, Any] = {
                     "noise_counter": noise_counter,
@@ -149,7 +149,7 @@ class TrainModel:
                     "nngrams": nngrams
                 }
 
-                logger.info("NOISE FILTER generado")
+                logger.warning("NOISE FILTER generado")
                 return noise_filter
 
         except Exception as e:
