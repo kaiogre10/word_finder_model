@@ -28,7 +28,9 @@
       "importe a pagar",
       "importe total a pagar",
       "cantidad a pagar",
-      "cantidad total a pagar"
+      "cantidad total a pagar",
+      "pesos",
+      "pesos mexicanos"
     ],
     "Subtotal": [
       "subtotal",
