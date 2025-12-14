@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Tuple, Optional
 
 logging.basicConfig(
     level=logging.INFO, 
-    format='%(levelname)s %(filename)s:%(lineno)d %(message)s'
+    format='%(filename)s:%(lineno)d %(message)s'
 )
 
 logger = logging.getLogger(__name__)
@@ -315,8 +315,8 @@ if __name__ == "__main__":
   #  except Exception as e:
    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
-    run_queries(base_queries, wf)
+   # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+   ##run_queries(base_queries, wf)
     logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
     run_queries2(base_queries2, wf)
 

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class WordFinder:
     def __init__(self, model_path: str):
         self.model: Dict[str, Any] = self._load_model(model_path)
-        self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
+       # self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
         self.params = self.model.get("params", {})
         self.global_words: List[str] = self.model["global_words"]
         self.variant_to_field = self.model.get("variant_to_field", {})
@@ -33,9 +33,9 @@ class WordFinder:
         self.global_counter = self.global_filter.get("global_counter", None)
         self.global_vocab = self.global_filter.get("global_vocab", None)
         self.model_time = self.model.get("model_time")
-        timestamp_model = os.path.getmtime(self.wf_path)
-        fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
-        logger.critical(f"FECHA DE GENERACIÓN DEL MODELO: {self.model_time}, FECHA DEL SCRIPT WORD_FINDER.PY: {fecha_wf}")
+     #   timestamp_model = os.path.getmtime(self.wf_path)
+       # fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
+      #p  logger.critical(f"FECHA DE GENERACIÓN DEL MODELO: {self.model_time}, FECHA DEL SCRIPT WORD_FINDER.PY: {fecha_wf}")
 
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         try:
@@ -49,6 +49,9 @@ class WordFinder:
         except Exception as e:
             logger.error(f"Error al cargar el modelo {e}", exc_info=True)
             raise
+           
+    def filter_words(self, text: str) -> str:
+
 
     def find_keywords(self, text: List[str] | str, threshold: Optional[float] = None) -> Optional[List[Dict[str, Any]]]:
         global_range: Tuple[int, int] = self.gngr
@@ -62,13 +65,14 @@ class WordFinder:
 
             results: List[Dict[str, Any]] = []
             for s in text:
+                logger.info(f"{s}")
 
-                if s is None:
-                    return None
+                if not s:
+                    continue
 
                 q = self._clean_text(s)
                 if not q:
-                    continue
+                    continue 
 
                 if not self._is_potential_keyword(q, global_range):
                     continue
@@ -85,6 +89,7 @@ class WordFinder:
                     min_w = max(1, cand_len - self.window_flex)
                     if min_w > len(q):
                         continue
+
                     max_w = min(len(q), cand_len + self.window_flex)
                     grams_cand = self.global_ngrams[i]
 
@@ -354,10 +359,10 @@ class WordFinder:
             logger.error(f"Error verificando palabra prohibida: {e}", exc_info=True)
             return False
 
-    def _clean_text(self, s: str) -> Optional[str]:
+    def _clean_text(self, s: str) -> str:
         try:
-            if s is None:
-                return None
+            if not s:
+                return ""
 
             q = clean(
                 s,
@@ -370,14 +375,14 @@ class WordFinder:
                 punct=True,
             )
 
-            if q is None:
-                return None
+            if not q:
+                return ""
 
             return q
 
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
-        return None
+        return ""
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
