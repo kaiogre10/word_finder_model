@@ -104,7 +104,7 @@ def log_search_results(res: Optional[List[Dict[str, Any]]], q: List[str], params
         if not res:
             return None
         for i, res in enumerate(res):
-            logger.info(f"Campo: {res.get('key_field')}, Palabra: '{res.get('word_found')}', Similitud: {res.get('similarity'):.6}, Query: '{q}")
+            logger.info(f"Campo: {res.get('key_field')}, Palabra: '{res.get('word_found')}', Similitud: {res.get('similarity'):.6}, Query: '{q}'")
         tiempo = time.perf_counter() - time0
         logger.debug(f"Tiempo total del tester: {tiempo}")
     except Exception as e:

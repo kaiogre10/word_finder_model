@@ -19,7 +19,7 @@
       "pzas totales",
       "articulos vendidos",
       "atriculos totales",
-      "total mercancía"
+      "total mercancia"
     ],
     "MontoTotalDocumento": [
       "total",
@@ -30,7 +30,8 @@
       "cantidad a pagar",
       "cantidad total a pagar",
       "pesos",
-      "pesos mexicanos"
+      "pesos mexicanos",
+      "mxn"
     ],
     "Subtotal": [
       "subtotal",
@@ -60,7 +61,7 @@
       "socio"
     ],
     "HeaderWords": [
-      "artículo",
+      "articulo",
       "cantidad",
       "cant",
       "clave",
@@ -109,12 +110,20 @@
     "elestudiante",
     "estudiante",
     "expedido",
-    "expedidopor",
+    "expedido por",
     "negro",
     "cortador",
     "pun",
     "unicel",
     "unitalla",
-    "unico"
+    "unico",
+    "com",
+    "www",
+    "gmail",
+    "hotmail",
+    "yahoo",
+    "outlook",
+    "correo",
+    "telefono"
   ]
 }

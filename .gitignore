@@ -11,6 +11,5 @@ logs/
 input2/
 input/
 models/
-*pkl
-*.gitignore
+*.pkl
 *word_finder_model.pkl

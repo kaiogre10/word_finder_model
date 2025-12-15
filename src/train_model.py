@@ -1,11 +1,10 @@
 import re
 import numpy as np
 import logging
-import unicodedata
+from cleantext import clean
 from typing import List, Dict, Any, Tuple
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MaxAbsScaler
-from scipy.sparse import spmatrix #type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -15,11 +14,11 @@ class TrainModel:
         self.params = config
         self.gngr: Tuple[int, int] = self.params["char_ngram_global"]
         self.ngr: Tuple[int, int] = self.params["char_ngram_noise"]
-        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", {})
+        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", 0)
         
     def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str]):
         # Construir vocabulario normalizado y mapeo variant_to_field
-        field_conversion_map_list: List[Dict[str, int]] = self.params.get("field_conversion_map", [])
+        field_conversion_map_list: List[Dict[str, int]] = self.params["field_conversion_map"]
         field_conversion_map = {k: v for d in field_conversion_map_list for k, v in d.items()}
         
         global_words: List[str] = []
@@ -69,15 +68,15 @@ class TrainModel:
                     binary=True,
                     dtype=np.float32
                 )
-                Xg_counts: spmatrix = global_counter.fit_transform(global_vocab)
-                gngrams: List[str] = list(global_counter.get_feature_names_out(Xg_counts))
+                Xg_counts: np.ndarray[str, np.dtype[np.float32]] = global_counter.fit_transform(global_vocab)
+                gngrams = list(global_counter.get_feature_names_out(str(Xg_counts)))
 
                 freqs: np.ndarray[Any, np.dtype[np.float32]] = Xg_counts.sum(axis=0).A1
 
                 scaler = MaxAbsScaler()
-                freq_array: np.ndarray[Any, np.dtype[np.float32]] = freqs.reshape(-1, 1)
-                scaled_freqs: np.ndarray[Any, np.dtype[np.float32]] = scaler.fit_transform(freq_array).ravel().astype(np.float32)
-
+                freq_array = freqs.reshape(-1, 1)
+                scaled_freqs = scaler.fit_transform(freq_array).ravel().astype(np.float32)
+                
                 gngram_scaled: Dict[str, float] = {
                     ngram: float(s)
                     for ngram, s in zip(gngrams, scaled_freqs)
@@ -85,7 +84,6 @@ class TrainModel:
 
                 gngrams_scaled: List[Tuple[str, float]] = sorted(gngram_scaled.items(), key=lambda x: x[1], reverse=True)
                 top_grams: int = int(len(gngrams_scaled)/self.top_ngrams_fraction)
-
                 global_ngrams: List[Tuple[str, float]] = gngrams_scaled[:top_grams]
 
                 logger.warning(f"TOP_GLOBAL: {np.array(global_ngrams).shape}")
@@ -112,10 +110,30 @@ class TrainModel:
 
     def _train_noise_filter(self, noise_words: List[str]):
         try:
+            
             noise_vocab: List[str] = []
+
+            all_noise: List[List[str]] = [] 
+
             for word in noise_words:
+                all_noise.append(word)
+                per_word_ngrams: List[str] = []
+
                 for n in range(self.ngr[0], self.ngr[1] + 1):
-                    noise_vocab.extend(self._ngrams(word, n))
+                    noise_ngrams = self._ngrams(word, n)
+
+                    noise_vocab.extend(noise_ngrams)
+                    
+                    per_word_ngrams.extend(noise_ngrams)
+
+                per_word_ngrams.append(noise_ngrams)
+
+                all_noise.append(per_word_ngrams)
+            
+            logger.info(f"ALL; {all_noise}")
+
+            # for i in all_noise:
+                # logger.info(f"ALL; {all_noise[i]}")
 
             if noise_vocab:
                 noise_counter = CountVectorizer(
@@ -125,8 +143,8 @@ class TrainModel:
                     binary=True,
                     dtype=np.float32
                 )
-                count_matrix: spmatrix = noise_counter.fit_transform(noise_vocab)
-                nngrams: List[str] = noise_counter.get_feature_names_out(count_matrix)
+                count_matrix: np.ndarray[str, np.dtype[np.float32]] = noise_counter.fit_transform(noise_vocab)
+                nngrams = list(noise_counter.get_feature_names_out(str(count_matrix)))
                 freqs: np.ndarray[Any, np.dtype[np.float32]] = count_matrix.sum(axis=0).A1
 
                 scaler = MaxAbsScaler()
@@ -139,9 +157,8 @@ class TrainModel:
                 }
 
                 noise_grams: List[Tuple[str, float]] = sorted(nngram_scaled.items(), key=lambda x: x[1], reverse=True)
-
                 logger.warning(f"SCALED_NOISE: {np.array(noise_grams).shape}")
-                logger.debug(f"Frecuencias ruidosas: {noise_grams}")
+                # logger.info(f"Frecuencias ruidosas: {noise_vocab}")
 
                 noise_filter: Dict[str, Any] = {
                     "noise_counter": noise_counter,
@@ -155,13 +172,25 @@ class TrainModel:
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
 
-    def _normalize(self, s: str) -> str:            
-        s = s.strip().lower()
-        s = unicodedata.normalize("NFKD", s)
-        s = "".join(ch for ch in s if not unicodedata.combining(ch))
-        s = re.sub(r"[^a-zA-Z0-9\s]", "", s)
-        # s = re.sub(r"[^a-zA-Z0-9]", "", s)
-        return s
+    def _normalize(self, s: str) -> str:
+        if not s:
+            return ""
+
+        q = clean(
+            s,
+            clean_all=False,
+            extra_spaces=False,
+            stemming=False,
+            stopwords=False,
+            lowercase=True,
+            numbers=True,
+            punct=True,
+        )
+
+        if not q:
+            return ""
+
+        return q
     
     def _ngrams(self, s: str, n: int) -> List[str]:
         if n <= 0 or not s:
