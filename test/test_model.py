@@ -167,7 +167,7 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
                 num_no_matches += 1
                 no_matches.append(q)
                 if show_no_match:
-                    logger.info(f"No match QUERIES2: '{q}'")
+                    logger.debug(f"No match QUERIES2: '{q}'")
     except Exception as e:
         logger.error(f"Error en RUN QUERIES: {e}", exc_info=True)
 
