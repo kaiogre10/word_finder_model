@@ -74,16 +74,15 @@ class WordFinder:
                 if not q:
                     continue 
 
-                # Eliminar palabras ruidosas del texto
+                if not self._is_potential_keyword(q, global_range):
+                    continue
+                
                 q_cleaned, removed_noise = self._remove_noise_substrings(q)
                 if removed_noise:
-                    logger.info(f"Ruido eliminado: {removed_noise} | Texto limpio: '{q_cleaned}'")
+                    logger.info(f"Ruido eliminado: '{removed_noise}' | Texto Limpio: '{q_cleaned}'")
                     q = q_cleaned
                     if not q:
                         continue
-
-                if not self._is_potential_keyword(q, global_range):
-                    continue
 
                 if self._is_forbidden(q):
                     continue
