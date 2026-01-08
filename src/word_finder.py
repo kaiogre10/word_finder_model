@@ -2,25 +2,25 @@ import os
 import datetime
 import logging
 import pickle
+import re
+import unicodedata
 from datetime import datetime
 from typing import List, Any, Dict, Optional, Tuple
-from cleantext import clean  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 class WordFinder:
     def __init__(self, model_path: str):
         self.model: Dict[str, Any] = self._load_model(model_path)
-       # self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
+        self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
         self.params = self.model.get("params", {})
         self.global_words: List[str] = self.model["global_words"]
         self.variant_to_field = self.model.get("variant_to_field", {})
         self.noise_words = self.model["noise_words"]
-        self.noise_filter = self.model.get("noise_filter", {})
-        self.global_filter = self.model.get("global_filter", {})
+        noise_filter = self.model.get("noise_filter", {})
+        global_filter = self.model.get("global_filter", {})
         self.global_filter_threshold = float(self.params.get("global_filter_threshold"))
-        self.global_ngrams: List[Tuple[str, float]] = self.global_filter["global_ngrams"]
-        self.noise_grams: List[Tuple[str, float]] = self.noise_filter["noise_grams"]
+        self.noise_grams: List[Tuple[str, float]] = noise_filter["noise_grams"]
         self.threshold: float = self.params.get("threshold_similarity")
         self.gngr: Tuple[int, int] = tuple(self.params["char_ngram_global"])
         self.ngr: Tuple[int, int] = tuple(self.params["char_ngram_noise"])
@@ -28,10 +28,8 @@ class WordFinder:
         self.weights_by_n: List[Tuple[int, int, float]] = [tuple(item) for item in self.params["weights_by_n"]]
         self.window_flex = self.params.get("window_flexibility")
         self.forb_match: float = self.params.get("forb_match")
-        self.max_results: int = self.params.get("max_results_per_query")
         self.field_conversion_map = self.params.get("field_conversion_map", {})
-        self.global_counter = self.global_filter.get("global_counter", None)
-        self.global_vocab = self.global_filter.get("global_vocab", None)
+        self.global_counter = global_filter.get("global_counter", None)
         self.model_time = self.model.get("model_time")
      #   timestamp_model = os.path.getmtime(self.wf_path)
        # fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
@@ -98,25 +96,11 @@ class WordFinder:
                         continue
 
                     max_w = min(len(q), cand_len + self.window_flex)
-                    grams_cand = self.global_ngrams[i]
-
-                    if isinstance(grams_cand, dict):
-                        pass
-
-                    else:
-                        try:
-                            # list/tuple of ngram strings -> group by length
-                            if isinstance(grams_cand, (list, tuple, set)) and all(
-                                    isinstance(x, str) for x in grams_cand):
-                                normalized: Dict[int, set[str]] = {}
-                                for g in grams_cand:
-                                    normalized.setdefault(len(g), set()).add(g)
-                                grams_cand = normalized
-                            else:
-                                # Unknown format (e.g. (word, freq) or other) -> build on the fly
-                                grams_cand = self._build_query_grams(cand, global_range)
-                        except Exception:
-                            grams_cand = self._build_query_grams(cand, global_range)
+                    
+                    # CORRECCIÓN: NO accedemos a self.global_ngrams[i] porque es un SET global
+                    # En su lugar, generamos los n-gramas para el candidato actual 'cand'
+                    # Tu función _build_query_grams es muy rápida.
+                    grams_cand = self._build_query_grams(cand, global_range)
 
                     try:
                         for w in range(min_w, max_w + 1):
@@ -313,7 +297,7 @@ class WordFinder:
             grams: List[str] = []
             for n in range(nrange[0], nrange[1] + 1):
                 grams.extend(self._ngrams(q, n))
-            if not grams or self.global_counter is None or self.global_vocab is None:
+            if not grams or self.global_counter is None:
                 return False
 
             # Transforma el texto en matriz de n-gramas usando el vocabulario global
@@ -387,30 +371,22 @@ class WordFinder:
         try:
             if not s:
                 return ""
+            
+            # Normalizar para separar tildes y convertir a minúsculas
+            # NFKD separa letras de sus acentos; luego 'ignore' los elimina al codificar a ASCII
+            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
 
-            q = clean(
-                s,
-                clean_all=False,
-                extra_spaces=True,
-                stemming=False,
-                stopwords=False,
-                lowercase=True,
-                numbers=True,
-                punct=True,
-            )
+            # eliminar todo lo que no sean letras a-z y espacios
+            q = re.sub(r"[^a-z\s]+", " ", q)
 
-            if not q:
-                return ""
-
-            return q
-
+            # dejar solo un espacio entre palabras y quitar extremos
+            return re.sub(r"\s+", " ", q).strip()
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
         return ""
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
-            "noise_words": self.noise_words,
             "field_conversion_map": self.field_conversion_map
         }
 

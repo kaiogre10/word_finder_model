@@ -1,7 +1,7 @@
 import re
 import numpy as np
 import logging
-from cleantext import clean
+import unicodedata
 from typing import List, Dict, Any, Tuple
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MaxAbsScaler
@@ -83,23 +83,16 @@ class TrainModel:
                 }
 
                 gngrams_scaled: List[Tuple[str, float]] = sorted(gngram_scaled.items(), key=lambda x: x[1], reverse=True)
-                top_grams: int = int(len(gngrams_scaled)/self.top_ngrams_fraction)
-                global_ngrams: List[Tuple[str, float]] = gngrams_scaled[:top_grams]
-
-                logger.warning(f"TOP_GLOBAL: {np.array(global_ngrams).shape}")
+                top_grams_count: int = int(len(gngrams_scaled) / self.top_ngrams_fraction)
                 
-                logger.debug(f"Frecuencias globales ordenadas: {gngrams_scaled}")
+                # Extraer solo los strings de los n-gramas, descartando el score/frecuencia
+                global_ngrams_list: List[str] = [ngram for ngram, _ in gngrams_scaled[:top_grams_count]]
 
-                W = np.array(gngrams_scaled)
-                Z = np.array(global_ngrams)
-                logger.debug(f"TOP GLOBAL: {np.array(Z)}, SORTED GLOBAL: {np.array(W)}")
-                logger.debug(f"TOP GLOBAL: {global_ngrams}")
+                logger.info(f"TOP GLOBAL (solo strings): {global_ngrams_list}")
 
                 global_filter: Dict[str, Any] = {
                     "global_counter": global_counter,
-                    "global_ngrams": global_ngrams,
-                    "all_ngrams_scaled": gngrams_scaled,
-                    "global_vocab": global_vocab
+                    "global_ngrams": set(global_ngrams_list),
                 }
 
                 logger.warning("GLOBAL FILTER generado")
@@ -112,7 +105,6 @@ class TrainModel:
         try:
             
             noise_vocab: List[str] = []
-
             all_noise: List[List[str]] = [] 
 
             for word in noise_words:
@@ -130,7 +122,7 @@ class TrainModel:
 
                 all_noise.append(per_word_ngrams)
             
-            logger.info(f"ALL; {all_noise}")
+            # logger.info(f"ALL; {all_noise}")
 
             # for i in all_noise:
                 # logger.info(f"ALL; {all_noise[i]}")
@@ -173,24 +165,22 @@ class TrainModel:
             logger.error(f"Error entreando global: {e}", exc_info=True)
 
     def _normalize(self, s: str) -> str:
-        if not s:
-            return ""
+        try:
+            if not s:
+                return ""
+            
+            # Normalizar para separar tildes y convertir a minúsculas
+            # NFKD separa letras de sus acentos; luego 'ignore' los elimina al codificar a ASCII
+            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
 
-        q = clean(
-            s,
-            clean_all=False,
-            extra_spaces=False,
-            stemming=False,
-            stopwords=False,
-            lowercase=True,
-            numbers=True,
-            punct=True,
-        )
+            # eliminar todo lo que no sean letras a-z y espacios
+            q = re.sub(r"[^a-z\s]+", " ", q)
 
-        if not q:
-            return ""
-
-        return q
+            # dejar solo un espacio entre palabras y quitar extremos
+            return re.sub(r"\s+", " ", q).strip()
+        except Exception as e:
+            logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
+        return ""
     
     def _ngrams(self, s: str, n: int) -> List[str]:
         if n <= 0 or not s:
