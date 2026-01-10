@@ -12,8 +12,7 @@ class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
         self.params = config
-        self.gngr: Tuple[int, int] = self.params["char_ngram_global"]
-        self.ngr: Tuple[int, int] = self.params["char_ngram_noise"]
+        self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
         self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", 0)
         
     def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str]):
@@ -48,8 +47,7 @@ class TrainModel:
         
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
-        logger.debug(f"Rango global elegido: {self.gngr}")
-        logger.debug(f"Rango noise elegido: {self.ngr}")
+        logger.debug(f"Rango n-gramas elegido: {self.ngrams}")
 
         return global_filter, noise_filter, global_words, variant_to_field
     
@@ -57,13 +55,13 @@ class TrainModel:
         try:
             global_vocab: List[str] = []
             for word in global_words:
-                for n in range(self.gngr[0], self.gngr[1] + 1):
+                for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     global_vocab.extend(self._ngrams(word, n))
             
             if global_vocab:
                 global_counter = CountVectorizer(
                     strip_accents="unicode",
-                    ngram_range=(self.gngr[0], self.gngr[1]),
+                    ngram_range=(self.ngrams[0], self.ngrams[1]),
                     analyzer="char",
                     binary=True,
                     dtype=np.float32
@@ -103,63 +101,39 @@ class TrainModel:
 
     def _train_noise_filter(self, noise_words: List[str]):
         try:
+            # CAMBIO RADICAL:
+            # En lugar de un modelo estadístico global (CountVectorizer) que mezcla todo,
+            # pre-calculamos los n-gramas específicos para CADA palabra de ruido por separado.
+            # Esto permite una comparación 1 a 1 exacta en WordFinder sin ruido cruzado.
             
-            noise_vocab: List[str] = []
-            all_noise: List[List[str]] = [] 
+            noise_grams_per_word: List[Dict[int, set[str]]] = []
 
             for word in noise_words:
-                all_noise.append(word)
-                per_word_ngrams: List[str] = []
+                # Nos aseguramos de usar la misma normalización
+                if not word:
+                    noise_grams_per_word.append({})
+                    continue
+                
+                # word ya viene normalizada de train_all_vectorizers? 
+                # Por si acaso, usamos s (pero asumimos que la lista entrante ya es válida)
+                # Estructura: Diccionario { tamaño_n : {set de gramas} }
+                word_grams_dict: Dict[int, set[str]] = {}
+                
+                for n in range(self.ngrams[0], self.ngrams[1] + 1):
+                    grams = self._ngrams(word, n)
+                    if grams:
+                        word_grams_dict[n] = set(grams)
+                
+                noise_grams_per_word.append(word_grams_dict)
 
-                for n in range(self.ngr[0], self.ngr[1] + 1):
-                    noise_ngrams = self._ngrams(word, n)
+            noise_filter: Dict[str, Any] = {
+                # Esta lista es paralela a noise_words. 
+                # noise_grams[0] son los gramas de noise_words[0]
+                "noise_grams": noise_grams_per_word
+            }
 
-                    noise_vocab.extend(noise_ngrams)
-                    
-                    per_word_ngrams.extend(noise_ngrams)
-
-                per_word_ngrams.append(noise_ngrams)
-
-                all_noise.append(per_word_ngrams)
-            
-            # logger.info(f"ALL; {all_noise}")
-
-            # for i in all_noise:
-                # logger.info(f"ALL; {all_noise[i]}")
-
-            if noise_vocab:
-                noise_counter = CountVectorizer(
-                    strip_accents="unicode",
-                    ngram_range=(self.ngr[0], self.ngr[1]),
-                    analyzer="char",
-                    binary=True,
-                    dtype=np.float32
-                )
-                count_matrix: np.ndarray[str, np.dtype[np.float32]] = noise_counter.fit_transform(noise_vocab)
-                nngrams = list(noise_counter.get_feature_names_out(str(count_matrix)))
-                freqs: np.ndarray[Any, np.dtype[np.float32]] = count_matrix.sum(axis=0).A1
-
-                scaler = MaxAbsScaler()
-                freq_array: np.ndarray[Any, np.dtype[np.float32]] = freqs.reshape(-1, 1)
-                scaled_freqs: np.ndarray[Any, np.dtype[np.float32]] = scaler.fit_transform(freq_array).ravel().astype(np.float32)
-
-                nngram_scaled: Dict[str, float] = {
-                    ngram: float(s)
-                    for ngram, s in zip(nngrams, scaled_freqs)
-                }
-
-                noise_grams: List[Tuple[str, float]] = sorted(nngram_scaled.items(), key=lambda x: x[1], reverse=True)
-                logger.warning(f"SCALED_NOISE: {np.array(noise_grams).shape}")
-                # logger.info(f"Frecuencias ruidosas: {noise_vocab}")
-
-                noise_filter: Dict[str, Any] = {
-                    "noise_counter": noise_counter,
-                    "noise_grams": noise_grams,
-                    "nngrams": nngrams
-                }
-
-                logger.warning("NOISE FILTER generado")
-                return noise_filter
+            logger.warning(f"NOISE FILTER generado: {len(noise_grams_per_word)} perfiles de ruido pre-calculados.")
+            return noise_filter
 
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
