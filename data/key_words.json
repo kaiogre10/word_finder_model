@@ -18,7 +18,7 @@
       "piezas totales",
       "pzas totales",
       "articulos vendidos",
-      "atriculos totales",
+      "articulos totales",
       "total mercancia"
     ],
     "MontoTotalDocumento": [
@@ -30,14 +30,13 @@
       "cantidad a pagar",
       "cantidad total a pagar",
       "pesos",
-      "pesos mexicanos",
-      "mxn"
+      "pesos mexicanos"
     ],
     "Subtotal": [
-      "subtotal",
-      "subtotal a pagar"
+      "subtotal"
     ],
     "FolioDocumento": [
+      "ticket",
       "folio",
       "numero de ticket",
       "registro",
@@ -51,7 +50,8 @@
       "numero de pedido",
       "numero de orden",
       "orden no",
-      "orden numero"
+      "orden numero",
+      "pedido"
     ],
     "NombreCliente": [
       "cliente",
@@ -100,15 +100,12 @@
     "puesto",
     "amarillo",
     "punct",
-    "punto",
-    "punta",
     "puntuación",
     "titulo",
     "repartir",
     "elestudiante",
     "estudiante",
     "expedido",
-    "expedido por",
     "negro",
     "cortador",
     "pun",
@@ -116,7 +113,6 @@
     "unitalla",
     "unico",
     "com",
-    "numero",
     "www",
     "mail",
     "yahoo",

@@ -61,6 +61,7 @@ class TrainModel:
             if global_vocab:
                 global_counter = CountVectorizer(
                     strip_accents="unicode",
+                    lowercase=True,
                     ngram_range=(self.ngrams[0], self.ngrams[1]),
                     analyzer="char",
                     binary=True,
@@ -82,25 +83,32 @@ class TrainModel:
                 }
 
                 gngrams_scaled: List[Tuple[str, float]] = sorted(gngram_scaled.items(), key=lambda x: x[1], reverse=True)
-                top_grams_count: int = int(len(gngrams_scaled) / self.top_ngrams_fraction)
                 
-                # Extraer solo los strings de los n-gramas, descartando el score/frecuencia
-                global_ngrams_list: List[str] = [ngram for ngram, _ in gngrams_scaled[:top_grams_count]]
+                # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
+                min_n = self.ngrams[0]
+                total_ngrams_all_sizes = len(gngrams)  # Todos los ngramas sin filtrar
+                filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
 
-                global_matrices: Dict[str, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+                logger.info(f"Numero máximo de filas: {filas_max_n}")
+                
+                # 2. Filtrar solo ngramas con frecuencia absoluta > 2 para poblar la matriz
+                gngrams_scaled = [
+                    (ng, score) for ng, score in gngrams_scaled
+                    if freqs[gngrams.index(ng)] > 2
+                ]
+                
+                global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                    # Seleccionamos los top N n-gramas EXCLUSIVAMENTE de este tamaño 'n'
                     ngrams_of_size = [ng for ng, score in gngrams_scaled if len(ng) == n]
-                    
-                    # Generamos la matriz con un número de filas estandarizado (N)
-                    global_matrices[n] = self._generate_matrix(n, ngrams_of_size, top_grams_count)
+                    # Calcula el número de filas máximas inversamente proporcional a n
+                    filas_n = max(1, int(filas_max_n * min_n / n))
+                    global_matrices[n] = self._generate_matrix(n, ngrams_of_size, filas_n)
 
-                for ngrams, matrix in global_matrices.items():
+                for matrix in global_matrices.values():
                     logger.info(f"{matrix.shape}")
-                    
+                                    
                 return {
                     "global_matrices": global_matrices,
-                    "global_ngrams": global_ngrams_list
                 }
 
         except Exception as e:
@@ -108,7 +116,6 @@ class TrainModel:
 
     def _train_noise_filter(self, noise_words: List[str]):
         try:
-            
             noise_grams_per_word: List[Dict[int, set[str]]] = []
 
             for word in noise_words:
@@ -140,13 +147,15 @@ class TrainModel:
         try:
             if not s:
                 return ""
-            
+            # Normaliza y elimina acentos
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-
+            # Deja solo letras a-z y espacios
             q = re.sub(r"[^a-z\s]+", " ", q)
-
-            # dejar solo un espacio entre palabras y quitar extremos
-            return re.sub(r"\s+", " ", q).strip()
+            # Elimina espacios extra y extremos
+            q = re.sub(r"\s+", " ", q).strip()
+            # Filtra cualquier caracter fuera del rango ASCII seguro (32-126)
+            q = ''.join(c for c in q if 32 <= ord(c) <= 126)
+            return q
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
         return ""

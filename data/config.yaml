@@ -4,13 +4,13 @@ params:
   threshold_similarity: 0.90
   global_filter_threshold: 0.60
   forb_match: 0.90
-  thresholds_by_len:
-    - [1, 2, 0.95]
-    - [3, 4, 0.90]
-    - [5, 6, 0.85]
-    - [7, 8, 0.75]
-    - [9, 15, 0.65]
-    - [16, 25, 0.50]
+  # thresholds_by_len:
+  #   - [1, 2, 0.95]
+  #   - [3, 4, 0.90]
+  #   - [5, 6, 0.85]
+  #   - [7, 8, 0.75]
+  #   - [9, 15, 0.65]
+  #   - [16, 25, 0.50]
 
   weights_by_n:
     - [1, 2, 0.50]
