@@ -66,6 +66,7 @@ class TrainModel:
                     binary=True,
                     dtype=np.float32
                 )
+                
                 Xg_counts: np.ndarray[str, np.dtype[np.float32]] = global_counter.fit_transform(global_vocab)
                 gngrams = list(global_counter.get_feature_names_out(str(Xg_counts)))
 
@@ -86,25 +87,27 @@ class TrainModel:
                 # Extraer solo los strings de los n-gramas, descartando el score/frecuencia
                 global_ngrams_list: List[str] = [ngram for ngram, _ in gngrams_scaled[:top_grams_count]]
 
-                logger.info(f"TOP GLOBAL (solo strings): {global_ngrams_list}")
+                global_matrices: Dict[str, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+                for n in range(self.ngrams[0], self.ngrams[1] + 1):
+                    # Seleccionamos los top N n-gramas EXCLUSIVAMENTE de este tamaño 'n'
+                    ngrams_of_size = [ng for ng, score in gngrams_scaled if len(ng) == n]
+                    
+                    # Generamos la matriz con un número de filas estandarizado (N)
+                    global_matrices[n] = self._generate_matrix(n, ngrams_of_size, top_grams_count)
 
-                global_filter: Dict[str, Any] = {
-                    "global_counter": global_counter,
-                    "global_ngrams": set(global_ngrams_list),
+                for ngrams, matrix in global_matrices.items():
+                    logger.info(f"{matrix.shape}")
+                    
+                return {
+                    "global_matrices": global_matrices,
+                    "global_ngrams": global_ngrams_list
                 }
-
-                logger.warning("GLOBAL FILTER generado")
-                return global_filter
 
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
 
     def _train_noise_filter(self, noise_words: List[str]):
         try:
-            # CAMBIO RADICAL:
-            # En lugar de un modelo estadístico global (CountVectorizer) que mezcla todo,
-            # pre-calculamos los n-gramas específicos para CADA palabra de ruido por separado.
-            # Esto permite una comparación 1 a 1 exacta en WordFinder sin ruido cruzado.
             
             noise_grams_per_word: List[Dict[int, set[str]]] = []
 
@@ -114,9 +117,6 @@ class TrainModel:
                     noise_grams_per_word.append({})
                     continue
                 
-                # word ya viene normalizada de train_all_vectorizers? 
-                # Por si acaso, usamos s (pero asumimos que la lista entrante ya es válida)
-                # Estructura: Diccionario { tamaño_n : {set de gramas} }
                 word_grams_dict: Dict[int, set[str]] = {}
                 
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
@@ -127,8 +127,6 @@ class TrainModel:
                 noise_grams_per_word.append(word_grams_dict)
 
             noise_filter: Dict[str, Any] = {
-                # Esta lista es paralela a noise_words. 
-                # noise_grams[0] son los gramas de noise_words[0]
                 "noise_grams": noise_grams_per_word
             }
 
@@ -143,11 +141,8 @@ class TrainModel:
             if not s:
                 return ""
             
-            # Normalizar para separar tildes y convertir a minúsculas
-            # NFKD separa letras de sus acentos; luego 'ignore' los elimina al codificar a ASCII
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
 
-            # eliminar todo lo que no sean letras a-z y espacios
             q = re.sub(r"[^a-z\s]+", " ", q)
 
             # dejar solo un espacio entre palabras y quitar extremos
@@ -162,3 +157,14 @@ class TrainModel:
         if len(s) < n:
             return []
         return [s[i:i+n] for i in range(len(s) - n + 1)]
+    
+    def _generate_matrix(self, size: int, ngrams: List[str], max_rows: int) -> np.ndarray[Any, np.dtype[np.uint8]]:
+        """Genera una matriz de tamaño fijo (max_rows x size) usando uint8."""
+        # Inicializamos matriz de ceros (espacio vacío) para asegurar el tamaño exacto
+        matrix = np.zeros((max_rows, size), dtype=np.uint8)
+        
+        for i, ng in enumerate(ngrams[:max_rows]):
+            # Convertimos cada caracter a su valor numérico uint8
+            matrix[i] = [ord(char) for char in ng]
+            
+        return matrix

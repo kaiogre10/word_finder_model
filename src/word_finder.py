@@ -1,6 +1,7 @@
 import os
 import datetime
 import logging
+import numpy as np
 import pickle
 import re
 import unicodedata
@@ -28,6 +29,7 @@ class WordFinder:
         self.window_flex = self.params.get("window_flexibility")
         self.forb_match: float = self.params.get("forb_match")
         self.global_counter = global_filter.get("global_counter", None)
+        self.global_matrices = global_filter.get("global_matrices", {})
         self.model_time = self.model.get("model_time")
      #   timestamp_model = os.path.getmtime(self.wf_path)
        # fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
@@ -290,29 +292,44 @@ class WordFinder:
         return default
 
     def _is_potential_keyword(self, q: str, nrange: Tuple[int, int]) -> bool:
-        """Filtro rápido: suma de frecuencias normalizadas de n-gramas globales."""
         try:
-            grams: List[str] = []
-            for n in range(nrange[0], nrange[1] + 1):
-                grams.extend(self._ngrams(q, n))
-            if not grams or self.global_counter is None:
+            if not q or not self.global_matrices:
                 return False
 
-            # Transforma el texto en matriz de n-gramas usando el vocabulario global
-            X = self.global_counter.transform([" ".join(grams)])
-            # Suma de frecuencias normalizadas
-            total = X.sum()
-            score = total / max(1, len(grams))
+            total_score = 0.0
+            grams_count = 0
 
-            if score < self.global_filter_threshold:
-                logger.debug(f"Filtro rechazado para '{q}' Score={score:.4f}, ngrams={grams}")
-                return False
-            else:
-                logger.debug(f"Filtro pasado para '{q}' Score={score:.4f}, ngrams={grams}")
-                return score > self.global_filter_threshold
+            for n, matrix_slice in self.global_matrices.items():
+                input_ngrams = self._ngrams(q, n)
+                if not input_ngrams: continue
+                
+                # Matriz del Input (M x N) en uint8
+                matrix_input = np.array([[ord(c) for c in ng] for ng in input_ngrams], dtype=np.uint8)
+                
+                # COMPARACIÓN MATRICIAL (Broadcasting)
+                # matrix_input[:, None] -> (M, 1, N)
+                # matrix_slice[None, :] -> (1, Rows, N)
+                # Resultado: (M, Rows, N) de comparaciones booleanas
+                matches = (matrix_input[:, np.newaxis, :] == matrix_slice[np.newaxis, :, :])
+                
+                # Similitud suave: Sumamos coincidencias y dividimos por el tamaño n
+                sim_matrix = matches.sum(axis=2) / n
+                
+                # ASIGNACIÓN BIYECTIVA (Máxima similitud única)
+                # Tomamos el mejor match del slice para cada n-grama del input
+                best_matches = sim_matrix.max(axis=1)
+                
+                total_score += best_matches.sum()
+                grams_count += len(input_ngrams)
+
+            if grams_count == 0: return False
+            
+            # Score final basado en la cobertura de la keyword
+            final_score = total_score / grams_count
+            return final_score >= self.global_filter_threshold
 
         except Exception as e:
-            logger.error("Error en filtro global: %s", e, exc_info=True)
+            logger.error(f"Error en filtro matricial: {e}")
             return False
 
     def _is_forbidden(self, candidate: str) -> bool:
