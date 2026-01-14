@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import re
 import unicodedata
+import time
 # from datetime import datetime
 from typing import List, Any, Dict, Optional, Tuple
 
@@ -48,6 +49,7 @@ class WordFinder:
             raise
 
     def find_keywords(self, text: List[str] | str, threshold: Optional[float] = None) -> Optional[List[Dict[str, Any]]]:
+        t0 = time.perf_counter()
         global_range: Tuple[int, int] = self.ngrams
         try:
             final_threshold = threshold if threshold is not None else self.threshold
@@ -71,6 +73,7 @@ class WordFinder:
                 if not q:
                     continue 
 
+                logger.info(f"Normalizacion completada en: '{t0 - time.perf_counter()}s")
                 if not self._is_potential_keyword(q):
                     continue
                 
@@ -81,8 +84,8 @@ class WordFinder:
                     if not q:
                         continue
 
-                if self._is_forbidden(q):
-                    continue
+            #    if self._is_forbidden(q):
+                   # continue
 
                 # Lista para guardar todos los matches de este string 's'
                 found_matches_for_s: List[Dict[str, Any]] = []
@@ -163,7 +166,7 @@ class WordFinder:
                             if right_part:
                                 queue.append(right_part)
                             
-                            logger.info(f"Extracted '{best_match['word_found']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
+                            logger.debug(f"Extracted '{best_match['word_found']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
 
             if single:
                 return results if results else []
@@ -292,46 +295,68 @@ class WordFinder:
             if not q or not self.global_matrices:
                 return False
 
-            total_matches = 0
-            total_ngrams = 0
+            total_soft_score = 0.0
+            total_input_ngrams = 0
 
             for n, matrix_slice in self.global_matrices.items():
                 input_ngrams = self._ngrams(q, n)
                 if not input_ngrams: 
                     continue
                 
-                # Matriz del Input (M x N) en uint8
+                num_input = len(input_ngrams)
+                total_input_ngrams += num_input
+                
+                # Matriz del Input (M x n) en uint8
                 matrix_input = np.array([[ord(c) for c in ng] for ng in input_ngrams], dtype=np.uint8)
                 
-                # Comparación exacta o por umbral de similitud
+                # Comparación posicional: [M_input, N_global, n]
                 matches = (matrix_input[:, np.newaxis, :] == matrix_slice[np.newaxis, :, :])
                 
-                # Similitud por n-grama: proporción de caracteres coincidentes
+                # Similitud real (0.0 a 1.0) entre cada n-grama input y cada n-grama global
                 sim_matrix = matches.sum(axis=2) / n
                 
-                # Para cada n-grama del input, tomar el mejor match
-                best_matches = sim_matrix.max(axis=1)
-                
-                # Contar cuántos n-gramas tienen similitud > umbral (ej: 0.8)
-                threshold = 0.8
-                total_matches += (best_matches >= threshold).sum()
-                total_ngrams += len(input_ngrams)
+                # --- Lógica de Emparejamiento por Prioridad (Unicidad) ---
+                # Identificamos todos los pares con similitud > 0
+                rows, cols = np.where(sim_matrix > 0)
+                if rows.size > 0:
+                    # Obtenemos los scores y ordenamos de mayor a menor (1.0 > N)
+                    # Esto garantiza que un match de 100% se asigne y bloquee sus índices
+                    # antes de que un match parcial pueda reclamarlos.
+                    scores = sim_matrix[rows, cols]
+                    prio_indices = np.argsort(-scores)
+                    
+                    used_in = set()
+                    used_gl = set()
+                    
+                    for idx in prio_indices:
+                        r, c = rows[idx], cols[idx]
+                        # Si ni el n-grama del input ni el de referencia han sido bloqueados:
+                        if r not in used_in and c not in used_gl:
+                            total_soft_score += float(scores[idx])
+                            used_in.add(r)
+                            used_gl.add(c)
+                            
+                            # Optimización: si ya asignamos todos los n-gramas del input, salimos
+                            if len(used_in) == num_input:
+                                break
 
-            if total_ngrams == 0: 
+            if total_input_ngrams == 0: 
                 return False
             
-            # Score final: proporción de n-gramas que tienen match
-            coverage = total_matches / total_ngrams
+            # El score final es la media de las mejores similitudes únicas encontradas
+            soft_coverage = total_soft_score / total_input_ngrams
             
-            if coverage > self.global_filter_threshold:
-                logger.info(f"Filtro global aprobado para: '{q}' | Cobertura: '{coverage:.4f}'")
-                return True
+            is_valid = soft_coverage > self.global_filter_threshold
+            
+            if is_valid:
+                logger.debug(f"Filtro global aprobado: '{q}' | Score Unívoco: {soft_coverage:.4f}")
             else:
-                logger.info(f"Filtro global no superado para: '{q}' | Cobertura: '{coverage:.4f}'")
-                return False
+                logger.info(f"Filtro global rechazado: '{q}' | Score Unívoco: {soft_coverage:.4f}")
+                
+            return is_valid
 
         except Exception as e:
-            logger.error(f"Error en filtro matricial: {e}")
+            logger.error(f"Error en filtro matricial único: {e}")
             return False
 
     def _is_forbidden(self, candidate: str) -> bool:
@@ -477,3 +502,10 @@ class WordFinder:
         except Exception as e:
             logger.error(f"Error eliminando substrings de ruido: {e}", exc_info=True)
             return text, []
+  
+    def check_full_word(self, text: str, place: str) -> bool:
+        if text in self.global_words or text in self.noise_words:
+            logger.info(f"String completo encontrado: '{text}'")
+            return True
+        else:
+            return False
