@@ -45,8 +45,10 @@ base_queries: List[str] = [
     "ivaarticulo", "razonsocialticket", "preciounitariocodigo", "ticketxyz",
     "totalxpto", "fechaclienteabc", "importetest", "sku", "modeloprueba",
     "preciounitario", "cantidadbar", "serviciolorem", "detalletest",
-    "code"
+    "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
+    "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
+
 base_queries2: List[str] = [
     "ticket razon", "precio cantidad", "detalle concepto", "referencia producto",
     "servicio precio", "subtotal hora", "cantidad sku", "importe modelo",
@@ -54,7 +56,7 @@ base_queries2: List[str] = [
     "iva articulo", "razon social ticket", "precio unitario codigo", "ticket xyz",
     "total xpto", "fecha cliente abc", "importe test", "sku", "modelo prueba",
     "precio unitario", "cantidad bar", "servicio lorem", "detalle test",
-    "code", "puntuación", "puntualidad", "estudiante", "italiano", "punt",
+    "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
 
@@ -93,7 +95,7 @@ def log_model_summary(wf: WordFinder):
     try:
         logger.info("Resumen del modelo WordFinder")
         logger.info(f"Total de palabras clave: {len(wf.global_words)}")
-        logger.info(f"Rango de n-gramas: {wf.ngr}")
+        logger.info(f"Rango de n-gramas: {wf.ngrams}")
         logger.info(f"Umbral de similitud: {wf.threshold}")
     except Exception as e:
         logger.error(f"Error en logg: {e}", exc_info=True)
@@ -104,7 +106,7 @@ def log_search_results(res: Optional[List[Dict[str, Any]]], q: List[str], params
         if not res:
             return None
         for i, res in enumerate(res):
-            logger.info(f"Campo: {res.get('key_field')}, Palabra: '{res.get('word_found')}', Similitud: {res.get('similarity'):.6}, Query: '{q}'")
+            logger.debug(f"Campo: {res.get('key_field')}, Palabra: '{res.get('word_found')}', Similitud: {res.get('similarity'):.6}, Query: '{q}'")
         tiempo = time.perf_counter() - time0
         logger.debug(f"Tiempo total del tester: {tiempo}")
     except Exception as e:
@@ -315,10 +317,12 @@ if __name__ == "__main__":
   #  except Exception as e:
    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-   # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
-   ##run_queries(base_queries, wf)
+    # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
+    # run_queries(base_queries, wf)
+    # logger.info(f"TIEMPO TEST 1: {time.perf_counter()-time0:.6f}")
     logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
     run_queries2(base_queries2, wf)
+    logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
         # Prueba con diferentes inputs
 #    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
