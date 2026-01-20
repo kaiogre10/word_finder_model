@@ -54,7 +54,7 @@ class ModelGenerator:
         params: Dict[str, Any] = self.config_dict.get("params", {})
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
-        global_filter, noise_filter, global_words, variant_to_field = self._train.train_all_vectorizers(key_words, noise_words)
+        global_filter, noise_filter, global_words, variant_to_field, all_ngrams = self._train.train_all_vectorizers(key_words, noise_words)
 
         now = datetime.now()
         model_time = now.isoformat()
@@ -67,6 +67,7 @@ class ModelGenerator:
             "noise_words": noise_words,
             "global_words": global_words,
             "model_time": model_time,
+            "all_ngrams": all_ngrams
         }
 
         logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")

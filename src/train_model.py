@@ -22,6 +22,7 @@ class TrainModel:
         
         global_words: List[str] = []
         variant_to_field: Dict[str, int] = {}
+        all_ngrams: Dict[str, Dict[int, List[str]]] = {}
 
         for field, variants in key_words.items():
             if not variants:
@@ -42,14 +43,28 @@ class TrainModel:
                 s = self._normalize(v)
                 if not s:
                     continue
+                ngrams_structure: Dict[int, List[str]] = {}
+                
+                # Iterar sobre el rango de N definido en config (ej: 2 a 3)
+                for n in range(self.ngrams[0], self.ngrams[1] + 1):
+                    # Generar n-gramas usando el método existente _ngrams
+                    # IMPORTANTE: Se mantiene como LISTA (no set) para permitir 
+                    # el algoritmo de "Greedy Unique Match" (conteo de repeticiones).
+                    grams_list = self._ngrams(s, n)
+                    ngrams_structure[n] = grams_list
+                
+                # Asignar al diccionario maestro
+                all_ngrams[s] = ngrams_structure
+
                 global_words.append(s)
                 variant_to_field[s] = field_id
         
+        # logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
         logger.debug(f"Rango n-gramas elegido: {self.ngrams}")
 
-        return global_filter, noise_filter, global_words, variant_to_field
+        return global_filter, noise_filter, global_words, variant_to_field, all_ngrams
     
     def _train_global(self, global_words: List[str]):
         try:
