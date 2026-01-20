@@ -16,8 +16,7 @@ class WordFinder:
         self.model: Dict[str, Any] = self._load_model(model_path)
         self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
         self.params = self.model.get("params", {})
-        raw_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = self.model.get("all_ngrams", {})
-        self.all_ngrams = dict(sorted(raw_ngrams.items(), key=lambda item: len(item[0]), reverse=True))
+        self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = self.model.get("all_ngrams", {})
         self.global_words: List[str] = self.model["global_words"]
         self.noise_words = self.model["noise_words"]
         noise_filter = self.model.get("noise_filter", {})
@@ -367,11 +366,6 @@ class WordFinder:
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
         return ""
-    
-    def get_model_info(self) -> Dict[str, Any]:
-        return {
-            "params": self.params
-        }
 
     def _remove_noise_substrings(self, text: str) -> Tuple[str, List[str]]:
         cleaned = text

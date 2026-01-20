@@ -20,8 +20,7 @@ class TrainModel:
         field_conversion_map_list: List[Dict[str, int]] = self.params["field_conversion_map"]
         field_conversion_map = {k: v for d in field_conversion_map_list for k, v in d.items()}
         
-        global_words: List[str] = []
-        # variant_to_field eliminado
+        all_words: List[str] = []
         
         # Nueva estructura: { palabra: (field_id, {n: [grams]}) }
         all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = {}
@@ -58,10 +57,11 @@ class TrainModel:
                 # Asignar al diccionario maestro como TUPLA (ID, NGRAMS)
                 all_ngrams[s] = (field_id, ngrams_structure)
 
-                global_words.append(s)
+                all_words.append(s)
                 # variant_to_field[s] = field_id (ELIMINADO)
         
-        logger.info(f"All ngrams: {all_ngrams}")
+        global_words = sorted(all_words, key=lambda item: len(item[0]), reverse=True)
+        #logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
         logger.debug(f"Rango n-gramas elegido: {self.ngrams}")

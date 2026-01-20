@@ -2,34 +2,23 @@
   "key_words": {
     "TotalProductos": [
       "total de articulos",
-      "total de piezas",
       "total de unidades",
-      "no de articulos",
-      "numero de piezas",
       "cantidad de articulos",
       "no articulos",
       "no de piezas",
       "no de pz",
-      "articulos",
       "no de unidades",
-      "cantidad total de piezas",
-      "cantidad de piezas totales",
-      "pza totales",
       "piezas totales",
       "pzas totales",
       "articulos vendidos",
-      "articulos totales",
-      "total mercancia"
+      "articulos totales"
     ],
     "MontoTotalDocumento": [
       "total",
+      "monto total",
       "total a pagar",
       "importe total",
-      "importe total a pagar",
-      "cantidad a pagar",
-      "cantidad total a pagar",
-      "pesos",
-      "pesos mexicanos"
+      "cantidad total a pagar"
     ],
     "Subtotal": [
       "subtotal"
@@ -37,25 +26,22 @@
     "FolioDocumento": [
       "ticket",
       "folio",
-      "numero de ticket",
       "registro",
       "ticket no",
-      "ticket numero",
-      "nota numero",
       "nota no",
       "nota de remision",
       "registro no",
       "pedido no",
       "numero de pedido",
-      "numero de orden",
+      "numero de folio",
       "orden no",
-      "orden numero",
-      "pedido"
+      "orden de compra",
+      "pedido",
+      "pedimento"
     ],
     "NombreCliente": [
       "cliente",
       "usuario",
-      "comprador",
       "consumidor",
       "socio"
     ],
@@ -76,14 +62,11 @@
       "monto",
       "precio",
       "precio unitario",
-      "precio por unidad",
-      "precio por pieza",
       "producto",
       "ps",
       "pu",
       "p unit",
       "p.u.c.d",
-      "p.u.d.o",
       "sku"
     ]
   },
@@ -93,30 +76,15 @@
     "computadora", 
     "computacion", 
     "computo",
-    "papeleria",
     "punto",
-    "puntillas",
     "puesto",
     "amarillo",
     "punct",
     "puntuación",
     "titulo",
     "repartir",
-    "elestudiante",
-    "estudiante",
-    "expedido",
     "negro",
     "cortador",
-    "pun",
-    "unicel",
-    "unitalla",
-    "unico",
-    "com",
-    "www",
-    "mail",
-    "yahoo",
-    "outlook",
-    "correo",
-    "telefono"
+    "pun"
   ]
 }
