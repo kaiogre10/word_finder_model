@@ -61,7 +61,7 @@ class TrainModel:
                 global_words.append(s)
                 # variant_to_field[s] = field_id (ELIMINADO)
         
-        # logger.info(f"All ngrams: {all_ngrams}")
+        logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
         noise_filter = self._train_noise_filter(noise_words)
         logger.debug(f"Rango n-gramas elegido: {self.ngrams}")
@@ -165,13 +165,11 @@ class TrainModel:
         try:
             if not s:
                 return ""
-            # Normaliza y elimina acentos
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-            # Deja solo letras a-z y espacios
-            q = re.sub(r"[^a-z\s]+", " ", q)
-            # Elimina espacios extra y extremos
+            # Eliminar cualquier cosa que no sea letra o espacio (SIN inyectar espacios nuevos)
+            q = re.sub(r"[^a-z\s]+", "", q)
+            # Si quieres seguir limpiando espacios múltiples / extremos:
             q = re.sub(r"\s+", " ", q).strip()
-            # Filtra cualquier caracter fuera del rango ASCII seguro (32-126)
             q = ''.join(c for c in q if 32 <= ord(c) <= 126)
             return q
         except Exception as e:

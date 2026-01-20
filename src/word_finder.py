@@ -358,7 +358,9 @@ class WordFinder:
             if not s:
                 return ""
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-            q = re.sub(r"[^a-z\s]+", " ", q)
+            # Eliminar cualquier cosa que no sea letra o espacio (SIN inyectar espacios nuevos)
+            q = re.sub(r"[^a-z\s]+", "", q)
+            # Si quieres seguir limpiando espacios múltiples / extremos:
             q = re.sub(r"\s+", " ", q).strip()
             q = ''.join(c for c in q if 32 <= ord(c) <= 126)
             return q
