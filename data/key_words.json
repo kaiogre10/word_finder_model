@@ -42,7 +42,6 @@
     "NombreCliente": [
       "cliente no",
       "usuario",
-      "consumidor",
       "socio"
     ],
     "HeaderWords": [
@@ -53,17 +52,14 @@
       "codigo",
       "concepto",
       "costo",
-      "costo unitario",
-      "costo por unidad",
-      "costo por pieza",
       "descripcion",
       "detalle",
       "importe",
       "monto",
       "precio",
-      "precio unitario",
       "producto",
       "ps",
+      "cu",
       "pu",
       "p unit",
       "p.u.c.d",
@@ -71,6 +67,7 @@
     ]
   },
   "noise_words": [
+    "cuenta",
     "expedido",
     "puntuacion",
     "puntualidad",
@@ -79,14 +76,13 @@
     "computo",
     "punto",
     "puesto",
-    "amarillo",
     "punct",
     "puntuación",
-    "titulo",
-    "repartir",
-    "negro",
-    "cortador",
     "pun",
-    "publico"
+    "publico",
+    "puntillas",
+    "codigo postal",
+    "cp",
+    "amezcua"
   ]
 }
