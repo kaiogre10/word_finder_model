@@ -8,7 +8,7 @@ __pycache__/
 logs/
 .idea/
 *idea
-input2/
+# input2/
 input/
 models/
 *.pkl

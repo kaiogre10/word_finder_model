@@ -1,0 +1,90 @@
+{
+    "poly_0001": {
+        "text": "CAJA 2",
+        "confidence": 97.0
+    },
+    "poly_0002": {
+        "text": "12/02/2024 02:27 p. m",
+        "confidence": 92.29
+    },
+    "poly_0003": {
+        "text": "TREINTA Y NUEVE PEGOS 20/100 M.N",
+        "confidence": 93.57
+    },
+    "poly_0004": {
+        "text": "$10.80",
+        "confidence": 99.59
+    },
+    "poly_0005": {
+        "text": "CAMBIO:",
+        "confidence": 96.57
+    },
+    "poly_0006": {
+        "text": "$0.00",
+        "confidence": 99.23
+    },
+    "poly_0007": {
+        "text": "TARJETA:",
+        "confidence": 98.79
+    },
+    "poly_0008": {
+        "text": "$50.00",
+        "confidence": 99.89
+    },
+    "poly_0009": {
+        "text": "EFECTIVO:",
+        "confidence": 99.19
+    },
+    "poly_0010": {
+        "text": "$ 39.20",
+        "confidence": 92.61
+    },
+    "poly_0011": {
+        "text": "TOTAL",
+        "confidence": 94.77
+    },
+    "poly_0013": {
+        "text": "$ 16.00",
+        "confidence": 92.81
+    },
+    "poly_0014": {
+        "text": "VTAM_505989",
+        "confidence": 91.0
+    },
+    "poly_0015": {
+        "text": "$23.20",
+        "confidence": 99.93
+    },
+    "poly_0016": {
+        "text": "VTAM 5O5977",
+        "confidence": 87.4
+    },
+    "poly_0017": {
+        "text": "IMPORTE",
+        "confidence": 94.38
+    },
+    "poly_0018": {
+        "text": "IICKETS",
+        "confidence": 80.99
+    },
+    "poly_0019": {
+        "text": "CLIENTE PUBLICO EN GENERAL",
+        "confidence": 95.7
+    },
+    "poly_0020": {
+        "text": "5911006325",
+        "confidence": 98.87
+    },
+    "poly_0021": {
+        "text": "SUCURSAL ZUMPANGQ (F7)",
+        "confidence": 90.91
+    },
+    "poly_0022": {
+        "text": "DRO1711093C0",
+        "confidence": 81.3
+    },
+    "poly_0023": {
+        "text": "DISTRIBUIDORA ROSSLI S.A DE C.V",
+        "confidence": 93.48
+    }
+}

@@ -1,0 +1,74 @@
+{
+    "poly_0000": {
+        "text": "ATENDTQ: JOCELYN",
+        "confidence": 92.55
+    },
+    "poly_0001": {
+        "text": "02/05/2023 18:09:39",
+        "confidence": 97.04
+    },
+    "poly_0003": {
+        "text": "ARTICULOS",
+        "confidence": 95.8
+    },
+    "poly_0004": {
+        "text": "16",
+        "confidence": 99.74
+    },
+    "poly_0005": {
+        "text": "TOTAL",
+        "confidence": 99.71
+    },
+    "poly_0006": {
+        "text": "16",
+        "confidence": 97.92
+    },
+    "poly_0008": {
+        "text": "SUBTOTAL",
+        "confidence": 99.07
+    },
+    "poly_0009": {
+        "text": "IECISFIS PFS0S 00/100 M.N",
+        "confidence": 89.56
+    },
+    "poly_0010": {
+        "text": "$9.5",
+        "confidence": 92.99
+    },
+    "poly_0011": {
+        "text": "$0",
+        "confidence": 92.38
+    },
+    "poly_0012": {
+        "text": "Doc $9.5",
+        "confidence": 90.44
+    },
+    "poly_0013": {
+        "text": "BI.ANCO",
+        "confidence": 96.03
+    },
+    "poly_0014": {
+        "text": "POPOTE SOLO PARA GLOBO",
+        "confidence": 95.47
+    },
+    "poly_0015": {
+        "text": "$6.5",
+        "confidence": 94.52
+    },
+    "poly_0016": {
+        "text": "1. Dog $6.5",
+        "confidence": 88.98
+    },
+    "poly_0018": {
+        "text": "CRENTE",
+        "confidence": 93.42
+    },
+    "poly_0019": {
+        "text": "P/POPOTE",
+        "confidence": 94.9
+    },
+    "poly_0020": {
+        "text": "CAMPANITA",
+        "confidence": 99.81
+    }
+}

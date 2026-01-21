@@ -1,0 +1,70 @@
+{
+    "poly_0000": {
+        "text": "SU CAMBIO:$0.00",
+        "confidence": 89.56
+    },
+    "poly_0001": {
+        "text": "PAGO CON:$79.50",
+        "confidence": 92.04
+    },
+    "poly_0002": {
+        "text": "T0TAL:$79.50",
+        "confidence": 93.74
+    },
+    "poly_0003": {
+        "text": "NO.DE AKTICULOS 3",
+        "confidence": 82.17
+    },
+    "poly_0004": {
+        "text": "0",
+        "confidence": 96.51
+    },
+    "poly_0005": {
+        "text": "$79.50",
+        "confidence": 99.1
+    },
+    "poly_0006": {
+        "text": "$26.50",
+        "confidence": 99.46
+    },
+    "poly_0007": {
+        "text": "GRAPA MARVEL C/500",
+        "confidence": 97.74
+    },
+    "poly_0011": {
+        "text": "PRECiO IMPORTF",
+        "confidence": 92.34
+    },
+    "poly_0012": {
+        "text": "CANT.DESCRIPCION",
+        "confidence": 97.83
+    },
+    "poly_0013": {
+        "text": "105648",
+        "confidence": 97.97
+    },
+    "poly_0014": {
+        "text": "FOLIO:",
+        "confidence": 86.78
+    },
+    "poly_0015": {
+        "text": "62.35",
+        "confidence": 95.45
+    },
+    "poly_0016": {
+        "text": "TURNO #",
+        "confidence": 93.55
+    },
+    "poly_0017": {
+        "text": "AMEZCUA",
+        "confidence": 96.86
+    },
+    "poly_0018": {
+        "text": "CAJERO:",
+        "confidence": 94.42
+    },
+    "poly_0019": {
+        "text": "10702/2024 01.13 PM",
+        "confidence": 93.57
+    }
+}

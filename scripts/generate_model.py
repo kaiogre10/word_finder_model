@@ -52,9 +52,10 @@ class ModelGenerator:
         key_words: Dict[str, Dict[str, List[str]]] = self.key_words_dict.get("key_words", {})
         noise_words: List[str] = self.key_words_dict["noise_words"]
         params: Dict[str, Any] = self.config_dict.get("params", {})
+        field_conversion_map_list: List[Dict[str, int]] = self.config_dict["field_conversion_map"]
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
-        global_filter, noise_filter, global_words, all_ngrams = self._train.train_all_vectorizers(key_words, noise_words)
+        global_filter, noise_filter, global_words, all_ngrams = self._train.train_all_vectorizers(key_words, noise_words, field_conversion_map_list)
 
         now = datetime.now()
         model_time = now.isoformat()

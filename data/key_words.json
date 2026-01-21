@@ -40,7 +40,7 @@
       "pedimento"
     ],
     "NombreCliente": [
-      "cliente",
+      "cliente no",
       "usuario",
       "consumidor",
       "socio"
@@ -71,6 +71,7 @@
     ]
   },
   "noise_words": [
+    "expedido",
     "puntuacion",
     "puntualidad",
     "computadora", 
@@ -85,6 +86,7 @@
     "repartir",
     "negro",
     "cortador",
-    "pun"
+    "pun",
+    "publico"
   ]
 }

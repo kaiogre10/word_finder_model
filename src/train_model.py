@@ -15,11 +15,9 @@ class TrainModel:
         self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
         self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", 0)
         
-    def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str]):
+    def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
         # Construir vocabulario normalizado y mapeo variant_to_field
-        field_conversion_map_list: List[Dict[str, int]] = self.params["field_conversion_map"]
         field_conversion_map = {k: v for d in field_conversion_map_list for k, v in d.items()}
-        
         all_words: List[str] = []
         
         # Nueva estructura: { palabra: (field_id, {n: [grams]}) }
@@ -33,6 +31,7 @@ class TrainModel:
             if not isinstance(variants, (list, tuple)):
                 continue
 
+            # field_conversion_map SÍ es un dict - no hay bug aquí
             field_id = field_conversion_map.get(field)
             if field_id is None:
                 logger.warning(f"El campo '{field}' no se encontró en 'field_conversion_map' y será omitido.")
@@ -49,8 +48,7 @@ class TrainModel:
                 # Iterar sobre el rango de N definido en config (ej: 2 a 3)
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     # Generar n-gramas usando el método existente _ngrams
-                    # IMPORTANTE: Se mantiene como LISTA (no set) para permitir 
-                    # el algoritmo de "Greedy Unique Match" (conteo de repeticiones).
+                    # IMPORTANTE: Se mantiene como LISTA (no set) para permitir el algoritmo de "Greedy Unique Match" (conteo de repeticiones).
                     grams_list = self._ngrams(s, n)
                     ngrams_structure[n] = grams_list
                 
@@ -63,8 +61,9 @@ class TrainModel:
         global_words = sorted(all_words, key=lambda item: len(item[0]), reverse=True)
         #logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
-        noise_filter = self._train_noise_filter(noise_words)
-        logger.debug(f"Rango n-gramas elegido: {self.ngrams}")
+
+        noise_words_sorted = sorted(noise_words, key=lambda item: len(item[0]), reverse=True)
+        noise_filter = self._train_noise_filter(noise_words_sorted)
 
         # Retornamos all_ngrams actualizado y eliminamos variant_to_field del return
         return global_filter, noise_filter, global_words, all_ngrams
@@ -83,10 +82,10 @@ class TrainModel:
                     ngram_range=(self.ngrams[0], self.ngrams[1]),
                     analyzer="char",
                     binary=True,
-                    dtype=np.float32
+                    dtype=np.uint8
                 )
                 
-                Xg_counts: np.ndarray[str, np.dtype[np.float32]] = global_counter.fit_transform(global_vocab)
+                Xg_counts: np.ndarray[str, np.dtype[np.uint8]] = global_counter.fit_transform(global_vocab)
                 gngrams = list(global_counter.get_feature_names_out(str(Xg_counts)))
 
                 freqs: np.ndarray[Any, np.dtype[np.float32]] = Xg_counts.sum(axis=0).A1
@@ -132,26 +131,26 @@ class TrainModel:
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
 
-    def _train_noise_filter(self, noise_words: List[str]):
+    def _train_noise_filter(self, noise_words_sorted: List[str]):
         try:
-            noise_grams_per_word: List[Dict[int, set[str]]] = []
+            noise_grams_per_word: List[Dict[int, List[str]]] = []
 
-            for word in noise_words:
+            for word in noise_words_sorted:
                 # Nos aseguramos de usar la misma normalización
                 if not word:
                     noise_grams_per_word.append({})
                     continue
                 
-                word_grams_dict: Dict[int, set[str]] = {}
+                word_grams_dict: Dict[int, List[str]] = {}
                 
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     grams = self._ngrams(word, n)
                     if grams:
-                        word_grams_dict[n] = set(grams)
+                        word_grams_dict[n] = grams
                 
                 noise_grams_per_word.append(word_grams_dict)
 
-            noise_filter: Dict[str, Any] = {
+            noise_filter: Dict[str, List[Dict[int, List[str]]]] = {
                 "noise_grams": noise_grams_per_word
             }
 
