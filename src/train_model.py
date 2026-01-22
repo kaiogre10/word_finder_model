@@ -13,7 +13,7 @@ class TrainModel:
         self.project_root = project_root
         self.params = config
         self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
-        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", 0)
+        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction")
         
     def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
         # Construir vocabulario normalizado y mapeo variant_to_field
@@ -51,18 +51,17 @@ class TrainModel:
                     # IMPORTANTE: Se mantiene como LISTA (no set) para permitir el algoritmo de "Greedy Unique Match" (conteo de repeticiones).
                     grams_list = self._ngrams(s, n)
                     ngrams_structure[n] = grams_list
-                
-                # Asignar al diccionario maestro como TUPLA (ID, NGRAMS)
+
                 all_ngrams[s] = (field_id, ngrams_structure)
 
                 all_words.append(s)
-                # variant_to_field[s] = field_id (ELIMINADO)
         
-        global_words = sorted(all_words, key=lambda item: len(item[0]), reverse=True)
+        global_words = sorted(all_words, key=len, reverse=True)
         #logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
 
-        noise_words_sorted = sorted(noise_words, key=lambda item: len(item[0]), reverse=True)
+        noise_words_sorted = sorted(noise_words, key=len, reverse=True)
+        # logger.info(f"global: {global_words}, noise: {noise_words_sorted}")
         noise_filter = self._train_noise_filter(noise_words_sorted)
 
         # Retornamos all_ngrams actualizado y eliminamos variant_to_field del return
@@ -165,9 +164,9 @@ class TrainModel:
             if not s:
                 return ""
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-            # Eliminar cualquier cosa que no sea letra o espacio (SIN inyectar espacios nuevos)
-            q = re.sub(r"[^a-z\s]+", "", q)
-            # Si quieres seguir limpiando espacios múltiples / extremos:
+            # Convertir cualquier cosa que NO sea letra o espacio en un ESPACIO
+            q = re.sub(r"[^a-z\s]+", " ", q)
+            # Limpiar espacios múltiples / extremos
             q = re.sub(r"\s+", " ", q).strip()
             q = ''.join(c for c in q if 32 <= ord(c) <= 126)
             return q

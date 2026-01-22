@@ -5,6 +5,7 @@
       "total de unidades",
       "cantidad de articulos",
       "no articulos",
+      "no de articulos",
       "no de piezas",
       "no de pz",
       "no de unidades",
@@ -17,8 +18,7 @@
       "total",
       "monto total",
       "total a pagar",
-      "importe total",
-      "cantidad total a pagar"
+      "importe total"
     ],
     "Subtotal": [
       "subtotal"
@@ -26,14 +26,13 @@
     "FolioDocumento": [
       "ticket",
       "folio",
-      "registro",
       "ticket no",
       "nota no",
-      "nota de remision",
       "registro no",
       "pedido no",
       "numero de pedido",
       "numero de folio",
+      "registro",
       "orden no",
       "orden de compra",
       "pedido",
@@ -42,10 +41,11 @@
     "NombreCliente": [
       "cliente no",
       "usuario",
-      "socio"
+      "socio",
+      "nombre"
     ],
     "HeaderWords": [
-      "articulo",
+      "articulos",
       "cantidad",
       "cant",
       "clave",
@@ -67,22 +67,15 @@
     ]
   },
   "noise_words": [
-    "cuenta",
     "expedido",
-    "puntuacion",
-    "puntualidad",
-    "computadora", 
-    "computacion", 
     "computo",
     "punto",
     "puesto",
     "punct",
-    "puntuación",
     "pun",
     "publico",
     "puntillas",
     "codigo postal",
-    "cp",
-    "amezcua"
+    "cp"
   ]
 }

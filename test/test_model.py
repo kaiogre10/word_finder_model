@@ -6,6 +6,7 @@ import logging
 import time
 import json
 import glob
+from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional
 
 logging.basicConfig(
@@ -84,7 +85,12 @@ def perturb(s: str) -> str:
     return f(s)
 
 # Generar queries con ruido
-random.seed(42)
+timenow = datetime.now()
+random_seed = datetime.timestamp(timenow)
+num_seed =str(random_seed)[-2:]
+# logger.info(f"seed: {random_seed}, recorte: {num_seed}")
+
+random.seed(num_seed)
 text: List[str] = []
 for q in base_queries and base_queries2:
     text.append(q)
@@ -202,15 +208,22 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
             for poly_id, poly_data in polygons.items():
                 if not poly_data:
                     continue
-                text = poly_data.get("text", "")
-                if text and text.strip():
-                    results = wf.find_keywords(text.strip())
+                ptext = poly_data.get("text", "")
+                # text = perturb(ptext)
+                text = ptext
+                if text:
+                    results = wf.find_keywords(text)
                     if results:
                         matches_in_doc += len([r for r in results if r])
                         for result in results:
                             if result and len(result) > 0:
-                                logger.info(f"MATCH: {poly_id} '{text}' | {result}")
+                                logger.debug(f"MATCH: {poly_id} '{text}' | {result}"
+                                            "\n ========================"
+                                            )
 
+                        logger.info(f"RESULTADOS DE '{poly_id}': {results}"
+                                    "\n=========================================")
+            
             logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s")
 
             if matches_in_doc == 0:

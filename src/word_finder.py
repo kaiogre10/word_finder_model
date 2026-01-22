@@ -39,7 +39,7 @@ class WordFinder:
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"Modelo no encontrado en {model_path}")
             with open(model_path, "rb") as f:
-                self.model = pickle.load(f)
+                self.model: Dict[str, Any] = pickle.load(f)
             if not isinstance(self.model, dict):  # type: ignore
                 raise ValueError("El pickle no tiene el formato esperado (dict).")
             logger.info(f"Modelo cargado en: '{time.perf_counter() - t0:.6f}s'")
@@ -52,6 +52,9 @@ class WordFinder:
         try:
             final_threshold = threshold if threshold is not None else self.threshold
 
+            if not text:
+                return []
+
             single = False
             if isinstance(text, str):
                 queue = [text]
@@ -60,17 +63,23 @@ class WordFinder:
                 queue = list(text)
 
             results: List[Dict[str, Any]] = []
+            # NUEVO: Rastrear campos asignados globalmente (excepto campo 6)
+            assigned_fields: Set[int] = set()
             
             while queue:
                 s = queue.pop(0)
-                if not s: continue
+                if not s:
+                    continue
 
                 q = self._normalize(s)
-                if not q: continue 
+                if not q:
+                    continue
 
+                # FILTRO GLOBAL: No usa assigned_fields
                 if not self._is_potential_keyword(q):
                     continue
                 
+                # ELIMINACIÓN DE RUIDO: No usa assigned_fields
                 q_cleaned, removed_noise = self._remove_noise_substrings(q)
                 if removed_noise:
                     q = q_cleaned
@@ -78,7 +87,6 @@ class WordFinder:
                 if self.check_full_word(text=q, place="noise"):
                     if not q: continue
 
-                assigned_fields: Set[int] = set()
                 found_matches_for_s: List[Dict[str, Any]] = []
 
                 # OPTIMIZACIÓN: Construir índice invertido de n-gramas del texto 'q' una sola vez
@@ -87,13 +95,15 @@ class WordFinder:
                     for idx, gram in enumerate(self._ngrams(q, n)):
                         q_grams_idx.setdefault(gram, []).append(idx)
 
+                # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
                 for cand, (key_field, grams_cand) in self.all_ngrams.items():
+                    # CORRECCIÓN: Saltar campos ya asignados (excepto campo 6)
                     if key_field != 6 and key_field in assigned_fields:
                         continue
                     
                     cand_len = len(cand)
                     # Encontrar posiciones donde coinciden n-gramas del candidato
-                    hit_positions = []
+                    hit_positions: List[int] = []
                     for n, grams in grams_cand.items():
                         for g in grams:
                             if g in q_grams_idx:
@@ -153,6 +163,7 @@ class WordFinder:
                             "word_found": cand,
                             "similarity": float(best_score_for_cand),
                             "text": s,
+                            "norm_text": q,
                             "start": best_sub_details["start"],
                             "end": best_sub_details["end"]
                         })
@@ -215,7 +226,8 @@ class WordFinder:
 
                             logger.debug(f"Extracted '{best_match['word_found']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
             if single:
-                logger.debug(f"RESULTS: {results}")
+                if results:
+                    logger.debug(f"RESULTS: {results}")
                 return results if results else []
             return results
         except Exception as e:
@@ -229,43 +241,47 @@ class WordFinder:
             return matches
 
         for i, match in enumerate(matches):
-            # CORREGIDO: Normalizar el texto antes de comparar
-            original_text = self._normalize(match['text'])
-            keyword_found = self._normalize(match['word_found'])
+            norm_text = match['norm_text']
+            word_found = self._normalize(match['word_found'])
 
-            # Construir n-gramas de todo el texto (sin ventana deslizante)
-            grams_text = self._build_query_grams(original_text)
+            # Construir n-gramas de TODO el texto (sin ventana deslizante)
+            grams_text = self._build_query_grams(norm_text)
             
-            if keyword_found in self.all_ngrams:
-                _, grams_keyword = self.all_ngrams[keyword_found]
+            if word_found in self.all_ngrams:
+                _, grams_word = self.all_ngrams[word_found]
             else:
-                grams_keyword = self._build_query_grams(keyword_found)
+                grams_word = self._build_query_grams(word_found)
 
-            tiebreaker_score = self._score_hybrid_greedy(grams_keyword, grams_text)
+            # Calcular similitud base
+            base_similarity = self._score_hybrid_greedy(grams_word, grams_text)
             
-            # AÑADIR: Penalización por diferencia de longitud
-            len_keyword = len(keyword_found)
-            len_text = len(original_text)
-            len_ratio = max(len_text, len_keyword) / max(1, min(len_text, len_keyword))
-            if len_ratio >= 2.0: 
-                penalty = min(len_text, len_keyword) / max(len_text, len_keyword)
-                tiebreaker_score *= penalty
+            # PENALIZACIÓN SIMÉTRICA POR DIFERENCIA DE LONGITUD
+            len_word = len(word_found)
+            len_text = len(norm_text)
+            
+            # Penalización simétrica: min/max siempre da un valor entre 0 y 1
+            # No importa cuál sea más largo, el resultado es el mismo
+            length_penalty = min(len_text, len_word) / max(len_text, len_word)
+            
+            # Score final = similitud base * penalización por longitud
+            match['score_final'] = base_similarity * length_penalty
 
-            match['score_final'] = tiebreaker_score
-
-            logger.debug(
+            logger.info(
                 "EMPATE: Match #%d: campo: %s, palabra: '%s' | score de desempate: %.6f | texto: '%s'",
-                i, match.get("key_field"), match.get("word_found"), tiebreaker_score, original_text
+                i, match.get("key_field"), word_found, match['score_final'], norm_text
             )
 
-        # Ordenar por score_final, y si hay empate, por longitud de palabra (Maximal Munch)
-        matches.sort(key=lambda x: (x['score_final'], len(x['word_found'])), reverse=True)
+        # Ordenar por score_final descendente, y si hay empate, por longitud de palabra
+        # matches.sort(key=lambda x: (x['score_final'], len(x['word_found'])), reverse=True)
 
-        logger.debug(
+        # Encontrar el mejor match usando max() en lugar de sort()
+        best_match = max(matches, key=lambda x: (x['score_final'], len(x['word_found'])))
+
+        logger.info(
             "DESEMPATE: texto '%s': campo: %s, palabra: '%s', score_final: %.6f",
-            matches[0].get("text"), matches[0].get("key_field"), matches[0].get("word_found"), matches[0].get("score_final"),
+            best_match.get("text"), best_match.get("key_field"), best_match.get("word_found"), best_match.get("score_final")
         )
-        return [matches[0]]
+        return [best_match]
 
     def _build_query_grams(self, q: str) -> Dict[int, List[str]]:
         """Construye n-gramas de la consulta retornando LISTAS (Duplicados permitidos)"""
@@ -412,8 +428,6 @@ class WordFinder:
             for i, word in enumerate(self.noise_words):
                 if word and i < len(self.noise_grams):
                     candidates.append((word, self.noise_grams[i]))
-            
-            # candidates.sort(key=lambda x: len(x[0]), reverse=True)
 
             for noise_word, grams_forbidden in candidates:
                 noise_len = len(noise_word)
@@ -471,9 +485,9 @@ class WordFinder:
             if not s:
                 return ""
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-            # Eliminar cualquier cosa que no sea letra o espacio (SIN inyectar espacios nuevos)
-            q = re.sub(r"[^a-z\s]+", "", q)
-            # Si quieres seguir limpiando espacios múltiples / extremos:
+            # Convertir cualquier cosa que NO sea letra o espacio en un ESPACIO
+            q = re.sub(r"[^a-z\s]+", " ", q)
+            # Limpiar espacios múltiples / extremos
             q = re.sub(r"\s+", " ", q).strip()
             return q
         except Exception as e:
