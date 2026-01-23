@@ -35,14 +35,11 @@
       "registro",
       "orden no",
       "orden de compra",
-      "pedido",
-      "pedimento"
+      "pedido"
     ],
     "NombreCliente": [
       "cliente no",
-      "usuario",
-      "socio",
-      "nombre"
+      "socio"
     ],
     "HeaderWords": [
       "articulos",

@@ -47,8 +47,6 @@ class TrainModel:
                 
                 # Iterar sobre el rango de N definido en config (ej: 2 a 3)
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                    # Generar n-gramas usando el método existente _ngrams
-                    # IMPORTANTE: Se mantiene como LISTA (no set) para permitir el algoritmo de "Greedy Unique Match" (conteo de repeticiones).
                     grams_list = self._ngrams(s, n)
                     ngrams_structure[n] = grams_list
 

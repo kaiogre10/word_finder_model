@@ -1,10 +1,11 @@
 params:
   char_ngrams: [2, 3]
   top_ngrams_fraction: 5
-  threshold_similarity: 0.902
-  global_filter_threshold: 0.6075
-  forb_match: 0.8598
+  threshold_similarity: 0.901
+  global_filter_threshold: 0.6105
+  forb_match: 0.876
   window_flexibility: 3
+  min_diff: 0.000009
 
 field_conversion_map:
   - 'noise_words': 0
