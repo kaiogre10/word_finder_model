@@ -2,7 +2,7 @@ import re
 import numpy as np
 import logging
 import unicodedata
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Iterable
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MaxAbsScaler
 
@@ -13,39 +13,27 @@ class TrainModel:
         self.project_root = project_root
         self.params = config
         self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
-        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction")
+        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", {})
         
-    def train_all_vectorizers(self, key_words: Dict[str, Any], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
+    def train_all_vectorizers(self, key_words: Dict[str, List[str]], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
         # Construir vocabulario normalizado y mapeo variant_to_field
         field_conversion_map = {k: v for d in field_conversion_map_list for k, v in d.items()}
         all_words: List[str] = []
         
-        # Nueva estructura: { palabra: (field_id, {n: [grams]}) }
         all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = {}
 
         for field, variants in key_words.items():
-            if not variants:
-                continue
-            if isinstance(variants, str):
-                variants = [variants]
-            if not isinstance(variants, (list, tuple)):
-                continue
-
-            # field_conversion_map SÍ es un dict - no hay bug aquí
             field_id = field_conversion_map.get(field)
             if field_id is None:
                 logger.warning(f"El campo '{field}' no se encontró en 'field_conversion_map' y será omitido.")
                 continue
 
             for v in variants:
-                if not isinstance(v, str):
-                    continue
                 s = self._normalize(v)
                 if not s:
                     continue
                 ngrams_structure: Dict[int, List[str]] = {}
                 
-                # Iterar sobre el rango de N definido en config (ej: 2 a 3)
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     grams_list = self._ngrams(s, n)
                     ngrams_structure[n] = grams_list

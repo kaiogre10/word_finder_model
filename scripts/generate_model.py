@@ -49,7 +49,7 @@ class ModelGenerator:
     def generate_model(self) -> Optional[Dict[str, Any]]:
         """Lee YAML, normaliza variantes, precomputa n-gramas y guarda un pickle con toda la info necesaria para WordFinder."""
         time1 = time.perf_counter()
-        key_words: Dict[str, Dict[str, List[str]]] = self.key_words_dict.get("key_words", {})
+        key_words: Dict[str, List[str]] = self.key_words_dict.get("key_words", {})
         noise_words: List[str] = self.key_words_dict["noise_words"]
         params: Dict[str, Any] = self.config_dict.get("params", {})
         field_conversion_map_list: List[Dict[str, int]] = self.config_dict["field_conversion_map"]

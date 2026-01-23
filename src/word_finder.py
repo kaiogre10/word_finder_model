@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 class WordFinder:
     def __init__(self, model_path: str):
         model: Dict[str, Any] = self._load_model(model_path)
-        self.wf_path: str = "C:/word_finder_model/src/word_finder.py"
         self.params = model.get("params", {})
         self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = model.get("all_ngrams", {})
         self.global_words: List[str] = model["global_words"]
@@ -143,9 +142,8 @@ class WordFinder:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
 
-                                    len_ratio = max(len(sub), cand_len) / max(1, min(len(sub), cand_len))
-                                    if len_ratio >= 2.0:
-                                        final_score *= (min(len(sub), cand_len) / max(len(sub), cand_len))
+                                    penalty = self._length_penalty(sub, cand)
+                                    final_score *= penalty
 
                                 if final_score > best_score_for_cand:
                                     best_score_for_cand = final_score
