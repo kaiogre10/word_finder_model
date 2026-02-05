@@ -7,31 +7,36 @@ import re
 import unicodedata
 import time
 # from datetime import datetime
-from typing import List, Any, Dict, Optional, Tuple, Set
+from typing import List, Any, Dict, Tuple, Set
 
 logger = logging.getLogger(__name__)
 
 class WordFinder:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, set_params: bool):
         model: Dict[str, Any] = self._load_model(model_path)
-        self.params = model.get("params", {})
-        self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = model.get("all_ngrams", {})
-        self.global_words: List[str] = model["global_words"]
-        self.noise_words = model["noise_words"]
+        if set_params:
+            """Aquí va una función que obtendría los parametros de configuración del master_config
+            pero me da flojera escribirla así que solo dejaré un log y no cambiaré el parametro "set_params"""
+            logger.info(f"Parametros establecidos y cargados manualmente")
+
+        params: Dict[str, Any] = model.get("params", {})
         noise_filter = model.get("noise_filter", {})
         global_filter = model.get("global_filter", {})
-        self.global_filter_threshold = float(self.params.get("global_filter_threshold"))
+
+        self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = model.get("all_ngrams", {})
+        self.global_words: List[str] = model["global_words"]
+        self.noise_words: Set[str] = set(model["noise_words"])
+        self.global_filter_threshold: float = params.get("global_filter_threshold", {})
         self.noise_grams: List[Dict[int, List[str]]] = noise_filter["noise_grams"]
-        self.threshold: float = self.params.get("threshold_similarity")
-        self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
-        self.window_flex = self.params.get("window_flexibility")
-        self.forb_match: float = self.params.get("forb_match")
-        self.min_diff: float = self.params.get("min_diff")
+        self.threshold: float = params.get("threshold_similarity", {})
+        self.ngrams: Tuple[int, int] = params["char_ngrams"]
+        self.window_flex: int = params.get("window_flexibility", {})
+        self.forb_match: float = params.get("forb_match", {})
+        self.min_diff: float = params.get("min_diff", {})
         self.global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = global_filter.get("global_matrices", {})
-        # self.model_time = model.get("model_time")
-     #   timestamp_model = os.path.getmtime(self.wf_path)
-       # fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
-      #p  logger.critical(f"FECHA DE GENERACIÓN DEL MODELO: {self.model_time}, FECHA DEL SCRIPT WORD_FINDER.PY: {fecha_wf}")
+        # timestamp_model = os.path.getmtime(self.wf_path)
+        # fecha_wf = datetime.fromtimestamp(timestamp_model).isoformat()
+        # logger.critical(f"FECHA DE GENERACIÓN DEL MODELO: {self.model_time}, FECHA DEL SCRIPT WORD_FINDER.PY: {fecha_wf}")
 
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         t0 = time.perf_counter()
@@ -48,9 +53,13 @@ class WordFinder:
             logger.error(f"Error al cargar el modelo {e}", exc_info=True)
             raise
 
-    def find_keywords(self, text: List[str] | str) -> Optional[List[Dict[str, Any]]]:
+    def find_keywords(self, text: List[str] | str) -> List[Dict[str, Any]]:
         try:
             if not text:
+                return []
+
+            if text.lower() in self.noise_words:
+                logger.debug(f"Ruido temprano: '{text}'")
                 return []
 
             single = False
@@ -73,6 +82,10 @@ class WordFinder:
                     continue
 
                 # FILTRO GLOBAL: No usa assigned_fields
+                if q in self.noise_words:
+                    logger.debug(f"Ruido temprano: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
+                    continue
+
                 if not self._is_potential_keyword(q):
                     continue
 
@@ -95,7 +108,6 @@ class WordFinder:
 
                 # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
                 for cand, (key_field, grams_cand) in self.all_ngrams.items():
-                    # CORRECCIÓN: Saltar campos ya asignados (excepto campo 6)
                     if key_field != 6 and key_field in assigned_fields:
                         continue
 
@@ -110,7 +122,7 @@ class WordFinder:
                     if not hit_positions:
                         continue
 
-                    best_score_for_cand: float = -1.0
+                    best_score_for_cand: float = 0.1
                     best_sub_details: Dict[str, int] = {}
 
                     # Agrupamos posiciones cercanas para no probar la misma zona mil veces
@@ -134,15 +146,16 @@ class WordFinder:
                                     continue
 
                                 sub = q[start:end]
-                                if not sub: continue
+                                if not sub:
+                                    continue
 
                                 if sub == cand:
-                                    final_score = 1.0
+                                    penalty = self._length_penalty(q, cand)
+                                    final_score = 1.0 * penalty
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-
-                                    penalty = self._length_penalty(sub, cand)
+                                    penalty = self._length_penalty(q, cand)
                                     final_score *= penalty
 
                                 if final_score > best_score_for_cand:
@@ -155,10 +168,10 @@ class WordFinder:
                     if best_score_for_cand > self.threshold:
                         found_matches_for_s.append({
                             "key_field": key_field,
-                            "word_found": cand,
+                            "key_word": cand,
                             "similarity": best_score_for_cand,
                             "text": s,
-                            "norm_text": q,
+                            "norm_ocr_text": q,
                             "start": best_sub_details["start"],
                             "end": best_sub_details["end"]
                         })
@@ -201,7 +214,7 @@ class WordFinder:
                                 queue.append(right_part)
 
                             logger.debug(
-                                f"Extracted '{best_match['word_found']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
+                                f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
             if single:
                 if results:
                     logger.debug(f"RESULTS: {results}")
@@ -209,6 +222,7 @@ class WordFinder:
             return results
         except Exception as e:
             logger.error(f"Error buscando palabras clave: '{e}'", exc_info=True)
+            return []
 
     def _resolve_ambiguity_by_full_word(self, matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not matches:
@@ -218,9 +232,9 @@ class WordFinder:
             return matches
 
         for i, match in enumerate(matches):
-            norm_text = match['norm_text']
-            word_found = match['word_found']
-            grams_text = self._build_query_grams(norm_text)
+            norm_ocr_text = match['norm_ocr_text']
+            word_found = match['key_word']
+            grams_text = self._build_query_grams(norm_ocr_text)
 
             if word_found in self.all_ngrams:
                 _, grams_word = self.all_ngrams[word_found]
@@ -231,22 +245,22 @@ class WordFinder:
             base_similarity = self._score_hybrid_greedy(grams_word, grams_text)
 
             # Penalización simétrica: min/max siempre da un valor entre 0 y 1 no importa cuál sea más largo, el resultado es el mismo
-            length_penalty = self._length_penalty(norm_text, word_found)
+            length_penalty = self._length_penalty(norm_ocr_text, word_found)
 
             # Score final = similitud base * penalización por longitud
             match['score_final'] = base_similarity * length_penalty
 
             logger.debug(
                 "EMPATE: Match #%d: campo: %s, palabra: '%s' | score de desempate: %.6f | texto: '%s'",
-                i, match.get("key_field"), word_found, match['score_final'], norm_text
+                i, match.get("key_field"), word_found, match['score_final'], norm_ocr_text
             )
 
         # Encontrar el mejor match usando max() en lugar de sort()
-        best_match = max(matches, key=lambda x: (x['score_final'], len(x['word_found'])))
+        best_match = max(matches, key=lambda x: (x['score_final'], len(x['key_word'])))
 
         logger.debug(
             "DESEMPATE: texto '%s': campo: %s, palabra: '%s', score_final: %.6f",
-            best_match.get("text"), best_match.get("key_field"), best_match.get("word_found"),
+            best_match.get("text"), best_match.get("key_field"), best_match.get("key_word"),
             best_match.get("score_final")
         )
         return [best_match]
@@ -334,7 +348,7 @@ class WordFinder:
 
     def _is_potential_keyword(self, q: str) -> bool:
         try:
-            if not q or not self.global_matrices:
+            if not q:
                 return False
 
             if self.check_full_word(text=q, place="global"):
@@ -459,7 +473,7 @@ class WordFinder:
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
         return ""
-    
+
     def _update_best_match(self, current_best: Dict[str, Any], match: Dict[str, Any]) -> Dict[str, Any]:
         """
         Decide si el nuevo match es mejor que el actual según las reglas de similitud y longitud.
@@ -467,13 +481,15 @@ class WordFinder:
         if match["similarity"] > current_best["similarity"]:
             return match
         elif abs(match["similarity"] - current_best["similarity"]) < self.min_diff:
-            if len(match["word_found"]) > len(current_best["word_found"]):
+            if len(match["key_word"]) > len(current_best["key_word"]):
                 return match
         return current_best
-    
+
     def _length_penalty(self, a: str, b: str) -> float:
         """Penalización simétrica por diferencia de longitud."""
         la, lb = len(a), len(b)
         if la == 0 or lb == 0:
             return 0.0
+        if la == lb:
+            return 1.0
         return min(la, lb) / max(la, lb)

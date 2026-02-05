@@ -318,7 +318,7 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
-    wf = WordFinder(MODEL_STD)
+    wf = WordFinder(MODEL_STD, False)
     # log_model_summary(wf)
     #try:
      #    test_json_lines(wf, DATA_FOLDER)
