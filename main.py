@@ -18,13 +18,6 @@ def configure_logging():
         sh.setLevel(level)
         root.addHandler(sh)
 
-        log_dir = "D:/proyect_data/wf_logs"
-        os.makedirs(log_dir, exist_ok=True)
-        fh = RotatingFileHandler(os.path.join(log_dir, "wf_logs.txt"), maxBytes=5_000_000, backupCount=3, encoding="utf-8")
-        fh.setFormatter(fmt)
-        fh.setLevel(level)
-        root.addHandler(fh)
-
     root.setLevel(level)
 
 if __name__ == "__main__":
