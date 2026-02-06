@@ -59,10 +59,6 @@ class WordFinder:
             if not text:
                 return []
 
-            # if self.check_full_vectors(text):
-            #     logger.info(f"Ruido temprano: '{text}'")
-            #     return []
-
             single = False
             if isinstance(text, str):
                 queue = [text]
@@ -83,6 +79,10 @@ class WordFinder:
                     continue
 
                 # FILTRO GLOBAL: No usa assigned_fields
+                # if self.check_full_vectors(q):
+                #     logger.info(f"Ruido temprano: '{text}'")
+                #     return []
+
                 if q in self.noise_words:
                     logger.debug(f"Ruido temprano: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
                     continue
@@ -497,11 +497,9 @@ class WordFinder:
         return min(la, lb) / max(la, lb)
 
     def vectorice_word(self, text: str) -> np.ndarray[Any, np.dtype[np.uint8]]:
-        return np.array([ord(char) for char in self._normalize(text)], dtype=np.uint8)
+        return np.array([ord(char) for char in text], dtype=np.uint8)
 
     def check_full_vectors(self, text: str) -> bool:
-    
-        # logger.info(f"SIMILITUD PARA: '{text}'")
         vect_text = self.vectorice_word(text)
         vec_len = len(vect_text)
 
@@ -514,18 +512,20 @@ class WordFinder:
             logger.info(f"Texto no coincide en largo")
             return False
         
+        cand = self.noise_array[mask]  # Sin list comprehension
+        sims = np.sum(vect_text == cand)
+        similarity = sims / vec_len
         # revect_text = "".join(chr(sim) for sim in sims)
-        cand = np.array([candidate for candidate in self.noise_array[mask]])
-        sims = np.argwhere(vect_text == cand)
-        logger.info(f"SIMS: {sims}")
+
+        # logger.info(f"SIMS: {sims}")
 
         similarity = sims.size / vec_len if sims.size > 0 else 0
 
         if similarity > self.forb_match:
             cand_str = "".join(chr(c) for c in cand)
-            logger.info(f"Similitud '{similarity}' para '{text}' con: '{cand_str}'")
+            logger.debug(f"Similitud '{similarity}' para '{text}' con: '{cand_str}'")
             return True
         else:
-            logger.info(f"Similitud insufuciente: '{similarity}' para '{text}'")
+            logger.debug(f"Similitud insufuciente: '{similarity}' para '{text}'")
 
             return False

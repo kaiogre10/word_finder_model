@@ -199,7 +199,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     time0 = time.perf_counter()
     for file_path in json_files:
         file_name = os.path.basename(file_path)
-        logger.info(f"\n--- Procesando archivo: {file_name} ---")
+        logger.debug(f"\n--- Procesando archivo: {file_name} ---")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)
@@ -221,10 +221,10 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                                             "\n ========================"
                                             )
 
-                        logger.info(f"RESULTADOS DE '{poly_id}': {results}"
+                        logger.debug(f"RESULTADOS DE '{poly_id}': {results}"
                                     "\n=========================================")
             
-            logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s")
+            logger.debug(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s")
 
             if matches_in_doc == 0:
                 logger.info("No se encontraron coincidencias en este documento")
