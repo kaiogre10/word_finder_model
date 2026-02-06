@@ -30,7 +30,7 @@ DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
 DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input2")
 
 try:    
-    wf: WordFinder = WordFinder(MODEL_STD)
+    wf: WordFinder = WordFinder(MODEL_STD, False)
 except Exception as e:
     logger.info(f"Error estableciendo root: {e}", exc_info=True)
 
@@ -326,17 +326,17 @@ if __name__ == "__main__":
      #    logger.error(f"Error testeando: {e}", exc_info=True)
 
     try:
-      test_json_poligons(wf, DATA_FOLDER2)
-      logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time0:.6f}")
+       test_json_poligons(wf, DATA_FOLDER2)
+       logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time0:.6f}")
     except Exception as e:
-       logger.error(f"Error testeando: {e}", exc_info=True)
+      logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
     # logger.info(f"TIEMPO TEST 1: {time.perf_counter()-time0:.6f}")
     # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
     # run_queries2(base_queries2, wf)
-    # logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
+    logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
         # Prueba con diferentes inputs
 #    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]

@@ -2,7 +2,7 @@ import re
 import numpy as np
 import logging
 import unicodedata
-from typing import List, Dict, Any, Tuple, Iterable
+from typing import List, Dict, Any, Tuple
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import MaxAbsScaler
 
@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
-        self.params = config
-        self.ngrams: Tuple[int, int] = self.params["char_ngrams"]
-        self.top_ngrams_fraction: int = self.params.get("top_ngrams_fraction", {})
+        params = config
+        self.ngrams: Tuple[int, int] = params["char_ngrams"]
+        self.top_ngrams_fraction: int = params.get("top_ngrams_fraction", {})
         
     def train_all_vectorizers(self, key_words: Dict[str, List[str]], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
         # Construir vocabulario normalizado y mapeo variant_to_field
@@ -119,31 +119,37 @@ class TrainModel:
     def _train_noise_filter(self, noise_words_sorted: List[str]):
         try:
             noise_grams_per_word: List[Dict[int, List[str]]] = []
+            noise_array: List[np.ndarray[Any, np.dtype[np.uint8]]] = []
 
             for word in noise_words_sorted:
                 # Nos aseguramos de usar la misma normalización
                 if not word:
                     noise_grams_per_word.append({})
                     continue
-                
+
+                noise_scalars = np.array([ord(char) for char in word], dtype=np.uint8)
+                noise_array.append(noise_scalars)
+                logger.info(f"Palabra: {word}, array: {noise_scalars.shape}")
+
                 word_grams_dict: Dict[int, List[str]] = {}
-                
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     grams = self._ngrams(word, n)
                     if grams:
                         word_grams_dict[n] = grams
-                
+
                 noise_grams_per_word.append(word_grams_dict)
 
-            noise_filter: Dict[str, List[Dict[int, List[str]]]] = {
-                "noise_grams": noise_grams_per_word
+            noise_filter: Dict[str, Any] = {
+                "noise_grams": noise_grams_per_word,
+                "noise_array": noise_array
             }
 
-            logger.warning(f"NOISE FILTER generado: {len(noise_grams_per_word)} perfiles de ruido pre-calculados.")
+            logger.debug(f"NOISE FILTER generado: {len(noise_grams_per_word)} perfiles de ruido pre-calculados.")
             return noise_filter
 
         except Exception as e:
-            logger.error(f"Error entreando global: {e}", exc_info=True)
+            logger.error(f"Error entreando noise filter: {e}", exc_info=True)
+            return 
 
     def _normalize(self, s: str) -> str:
         try:

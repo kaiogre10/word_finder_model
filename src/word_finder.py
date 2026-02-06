@@ -20,7 +20,7 @@ class WordFinder:
             logger.info(f"Parametros establecidos y cargados manualmente")
 
         params: Dict[str, Any] = model.get("params", {})
-        noise_filter = model.get("noise_filter", {})
+        noise_filter: Dict[str, Any] = model.get("noise_filter", {})
         global_filter = model.get("global_filter", {})
 
         self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = model.get("all_ngrams", {})
@@ -28,6 +28,7 @@ class WordFinder:
         self.noise_words: Set[str] = set(model["noise_words"])
         self.global_filter_threshold: float = params.get("global_filter_threshold", {})
         self.noise_grams: List[Dict[int, List[str]]] = noise_filter["noise_grams"]
+        self.noise_array: List[np.ndarray[Any, np.dtype[np.uint8]]] = noise_filter["noise_array"]
         self.threshold: float = params.get("threshold_similarity", {})
         self.ngrams: Tuple[int, int] = params["char_ngrams"]
         self.window_flex: int = params.get("window_flexibility", {})
@@ -58,9 +59,9 @@ class WordFinder:
             if not text:
                 return []
 
-            if text.lower() in self.noise_words:
-                logger.debug(f"Ruido temprano: '{text}'")
-                return []
+            # if self.check_full_vectors(text):
+            #     logger.info(f"Ruido temprano: '{text}'")
+            #     return []
 
             single = False
             if isinstance(text, str):
@@ -458,7 +459,8 @@ class WordFinder:
         elif place == "noise":
             return text in set(self.noise_words)
         else:
-            return False
+            logger.warning(f"Error en parámetro 'place': {place}, se retornará True intencionalmente")
+            return True
 
     def _normalize(self, s: str) -> str:
         try:
@@ -493,3 +495,37 @@ class WordFinder:
         if la == lb:
             return 1.0
         return min(la, lb) / max(la, lb)
+
+    def vectorice_word(self, text: str) -> np.ndarray[Any, np.dtype[np.uint8]]:
+        return np.array([ord(char) for char in self._normalize(text)], dtype=np.uint8)
+
+    def check_full_vectors(self, text: str) -> bool:
+    
+        # logger.info(f"SIMILITUD PARA: '{text}'")
+        vect_text = self.vectorice_word(text)
+        vec_len = len(vect_text)
+
+        lens = [len(array) for array in self.noise_array]
+        if not vec_len in lens:
+            return False
+        
+        mask = lens.index(vec_len) 
+        if not mask:
+            logger.info(f"Texto no coincide en largo")
+            return False
+        
+        # revect_text = "".join(chr(sim) for sim in sims)
+        cand = np.array([candidate for candidate in self.noise_array[mask]])
+        sims = np.argwhere(vect_text == cand)
+        logger.info(f"SIMS: {sims}")
+
+        similarity = sims.size / vec_len if sims.size > 0 else 0
+
+        if similarity > self.forb_match:
+            cand_str = "".join(chr(c) for c in cand)
+            logger.info(f"Similitud '{similarity}' para '{text}' con: '{cand_str}'")
+            return True
+        else:
+            logger.info(f"Similitud insufuciente: '{similarity}' para '{text}'")
+
+            return False

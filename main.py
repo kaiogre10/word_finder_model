@@ -7,6 +7,7 @@ from cache_service import  cleanup_project_cache
 def configure_logging():
     level_name = os.environ.get("DEBUG", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
+    log_level = getattr(logging, level_name, logging.DEBUG)
     
     fmt = logging.Formatter("%(filename)s:%(lineno)d %(name)s: %(message)s")
     root = logging.getLogger()
@@ -17,9 +18,9 @@ def configure_logging():
         sh.setLevel(level)
         root.addHandler(sh)
 
-        log_dir = os.path.join(os.path.dirname(__file__), "logs")
+        log_dir = "D:/proyect_data/wf_logs"
         os.makedirs(log_dir, exist_ok=True)
-        fh = RotatingFileHandler(os.path.join(log_dir, "logs.txt"), maxBytes=5_000_000, backupCount=3, encoding="utf-8")
+        fh = RotatingFileHandler(os.path.join(log_dir, "wf_logs.txt"), maxBytes=5_000_000, backupCount=3, encoding="utf-8")
         fh.setFormatter(fmt)
         fh.setLevel(level)
         root.addHandler(fh)
