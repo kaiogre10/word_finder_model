@@ -12,4 +12,4 @@ logs/
 input/
 models/
 *.pkl
-*word_finder_model.pkl
+*.txt

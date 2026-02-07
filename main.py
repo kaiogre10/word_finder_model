@@ -1,13 +1,11 @@
 import os
 import logging
-from logging.handlers import RotatingFileHandler
 from scripts.generate_model import ModelGenerator
 from cache_service import  cleanup_project_cache
 
 def configure_logging():
     level_name = os.environ.get("DEBUG", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
-    log_level = getattr(logging, level_name, logging.DEBUG)
     
     fmt = logging.Formatter("%(filename)s:%(lineno)d %(name)s: %(message)s")
     root = logging.getLogger()
