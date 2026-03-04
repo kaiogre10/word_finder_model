@@ -221,10 +221,10 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                                             "\n ========================"
                                             )
 
-                        logger.debug(f"RESULTADOS DE '{poly_id}': {results}"
-                                    "\n=========================================")
+                        logger.info(f"KEYWORD: '{poly_id}': {results}")
             
-            logger.debug(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s")
+            logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
+                        "\n===========================================================================================================================")
 
             if matches_in_doc == 0:
                 logger.info("No se encontraron coincidencias en este documento")
@@ -325,17 +325,17 @@ if __name__ == "__main__":
     #except Exception as e:
      #    logger.error(f"Error testeando: {e}", exc_info=True)
 
-    try:
-       test_json_poligons(wf, DATA_FOLDER2)
-       logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time0:.6f}")
-    except Exception as e:
-      logger.error(f"Error testeando: {e}", exc_info=True)
+#    try:
+ #      test_json_poligons(wf, DATA_FOLDER2)
+  #     logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time0:.6f}")
+   # except Exception as e:
+    #  logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
     # logger.info(f"TIEMPO TEST 1: {time.perf_counter()-time0:.6f}")
     # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
-    # run_queries2(base_queries2, wf)
+    run_queries2(base_queries2, wf)
     logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
         # Prueba con diferentes inputs
