@@ -195,8 +195,7 @@ class WordFinder:
 
                     if final_matches:
                         best_match = final_matches[0]
-                        results.append(best_match)
-
+                        
                         start = best_match.get("start")
                         end = best_match.get("end")
 
@@ -211,11 +210,17 @@ class WordFinder:
 
                             logger.debug(
                                 f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
-            if single:
-                if results:
-                    logger.debug(f"RESULTS: {results}")
-                return results if results else []
-            return results
+                        
+                        # Eliminar los índices antes de agregar a resultados finales
+                        best_match.pop("start", None)
+                        best_match.pop("end", None)
+                        results.append(best_match)
+
+                    if single:
+                        if results:
+                            logger.debug(f"RESULTS: {results}")
+                        return results if results else []
+                    return results
         except Exception as e:
             logger.error(f"Error buscando palabras clave: '{e}'", exc_info=True)
             return []
