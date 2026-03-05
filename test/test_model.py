@@ -199,7 +199,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     time0 = time.perf_counter()
     for file_path in json_files:
         file_name = os.path.basename(file_path)
-        logger.debug(f"\n--- Procesando archivo: {file_name} ---")
+        logger.info(f"\n--- Procesando archivo: {file_name} ---")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)
@@ -221,7 +221,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                                             "\n ========================"
                                             )
 
-                        logger.info(f"KEYWORD: '{poly_id}': {results}")
+                        logger.info(f"RESULTADOS: '{poly_id}': {results}")
             
             logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
                         "\n===========================================================================================================================")
@@ -256,26 +256,30 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
         total_lines_processed = 0
         
         for file_path in json_files:
-            logger.info(f"\n--- Procesando archivo: {os.path.basename(file_path)} ---")
+            file_name = os.path.basename(file_path)
+            logger.info(f"\n--- Procesando archivo: {file_name} ---")
             
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines: Dict[str, Dict[str, Any]] = json.load(f)
+                matches_in_doc = 0
+                time1 = time.perf_counter()
 
                 # Extraer todos los textos del documento
                 all_text: List[str] = []
                 line_ids: List[str] = []
                 
                 for line_id, line_data in lines.items():
-                    text = line_data.get("text", "")
-                    if text and text.strip():  # Solo textos no vacíos
+                    text= line_data.get("text", "")
+                    if text:
                         all_text.append(text.strip())
                         line_ids.append(line_id)
-                
+
+                # logger.info(f"Texto: {all_text}")
                 if not all_text:
                     logger.warning(f"No se encontró texto válido en {os.path.basename(file_path)}")
                     continue
                 
-                logger.info(f"Líneas con texto: {len(all_text)}")
+                logger.debug(f"Líneas con texto: {len(all_text)}")
                 
                 time_doc = time.perf_counter()
                 results = wf.find_keywords(all_text)
@@ -288,18 +292,16 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
                     
                     logger.debug(f"Coincidencias encontradas: {matches_in_doc}/{len(all_text)}")
                     
-                    # Mostrar solo las coincidencias más relevantes
-                    try:
-                        for i, result in enumerate(results):
-                            if result and len(result) > 0:
-                                logger.info(f"Resultado: {line_ids[i]}: {result}")
-                                # logger.info(f"{line_ids[i]}: '{all_text[i][:30]}...' -> {result.get('field', 'N/A')} ({result.get('similarity', 0):.3f})")
-                                
-                    except Exception as e:
-                        logger.error(f"Errpr buscando mejor match: {e}", exc_info=True)
-                else:
+                    for i, result in enumerate(results):
+                        if result and len(result) > 0:
+                            logger.info(f"Resultado: {line_ids[i]}: {result}")
+
+                logger.info(f"Total de matches por documento: {matches_in_doc} / {len(lines.items())} en {time.perf_counter() - time1:.6f}s"
+                        "\n===========================================================================================================================")
+                   
+                if matches_in_doc == 0:
                     logger.info("No se encontraron coincidencias en este documento")
-                
+
                 total_lines_processed += len(all_text)
         
         # Resumen final
@@ -310,7 +312,7 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
         if total_lines_processed > 0:
             porcentaje = (total_matches / total_lines_processed) * 100
             logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
-        logger.info(f"Tiempo total: {time.perf_counter() - time0:.4f}s")
+        logger.info(f"Tiempo promedio: {(time.perf_counter() - time0)/len(json_files):.6f}s")
         
     except Exception as e:
         logger.error(f"Error testeando: {e}", exc_info=True)
@@ -319,24 +321,26 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
 if __name__ == "__main__":
     time0 = time.perf_counter()
     wf = WordFinder(MODEL_STD, False)
-    # log_model_summary(wf)
-    #try:
-     #    test_json_lines(wf, DATA_FOLDER)
-    #except Exception as e:
-     #    logger.error(f"Error testeando: {e}", exc_info=True)
+    # try:
+    #     time1 = time.perf_counter()
+    #     test_json_lines(wf, DATA_FOLDER)
+    #     logger.info(f"TIEMPO TEST LINEAS: {time.perf_counter()-time1:.6f}")
+    # except Exception as e:
+    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-#    try:
- #      test_json_poligons(wf, DATA_FOLDER2)
-  #     logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time0:.6f}")
-   # except Exception as e:
-    #  logger.error(f"Error testeando: {e}", exc_info=True)
+    try:
+        time2 = time.perf_counter()
+        test_json_poligons(wf, DATA_FOLDER2)
+        logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time2:.6f}")
+    except Exception as e:
+        logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
     # logger.info(f"TIEMPO TEST 1: {time.perf_counter()-time0:.6f}")
     # logger.info("=====TEST DE QUERIES2 CON ESPACIOS INCIADO=====")
-    run_queries2(base_queries2, wf)
-    logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
+    # run_queries2(base_queries2, wf)
+    # logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
         # Prueba con diferentes inputs
 #    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]

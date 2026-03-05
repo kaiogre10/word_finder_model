@@ -1,70 +1,78 @@
 {
     "poly_0000": {
-        "text": "SU CAMBIO:$0.00",
-        "confidence": 89.56
+        "text": "SU CAMBIO: $0.00",
+        "confidence": 90.64
     },
     "poly_0001": {
         "text": "PAGO CON:$79.50",
-        "confidence": 92.04
+        "confidence": 90.83
     },
     "poly_0002": {
-        "text": "T0TAL:$79.50",
-        "confidence": 93.74
+        "text": "TOTAL: $79.50",
+        "confidence": 96.77
     },
     "poly_0003": {
-        "text": "NO.DE AKTICULOS 3",
-        "confidence": 82.17
+        "text": "NO.DE ARTICULOS: 3",
+        "confidence": 94.98
     },
     "poly_0004": {
         "text": "0",
-        "confidence": 96.51
+        "confidence": 99.44
     },
     "poly_0005": {
-        "text": "$79.50",
-        "confidence": 99.1
+        "text": "$26.50",
+        "confidence": 99.22
     },
     "poly_0006": {
-        "text": "$26.50",
-        "confidence": 99.46
+        "text": "$79.50",
+        "confidence": 99.66
     },
     "poly_0007": {
         "text": "GRAPA MARVEL C/500",
-        "confidence": 97.74
+        "confidence": 98.23
+    },
+    "poly_0008": {
+        "text": "3",
+        "confidence": 98.71
     },
     "poly_0011": {
-        "text": "PRECiO IMPORTF",
-        "confidence": 92.34
+        "text": "IMPORTF",
+        "confidence": 75.95
     },
     "poly_0012": {
-        "text": "CANT.DESCRIPCION",
-        "confidence": 97.83
+        "text": "CANT.DESCRIPCIOR",
+        "confidence": 88.09
     },
     "poly_0013": {
-        "text": "105648",
-        "confidence": 97.97
+        "text": "PRECIO",
+        "confidence": 92.47
     },
     "poly_0014": {
-        "text": "FOLIO:",
-        "confidence": 86.78
+        "text": "105648",
+        "confidence": 99.41
     },
     "poly_0015": {
-        "text": "62.35",
-        "confidence": 95.45
+        "text": "FOLIO:",
+        "confidence": 87.05
     },
     "poly_0016": {
-        "text": "TURNO #",
-        "confidence": 93.55
+        "text": "6235",
+        "confidence": 99.71
     },
     "poly_0017": {
-        "text": "AMEZCUA",
-        "confidence": 96.86
+        "text": "TURNO #",
+        "confidence": 99.28
     },
     "poly_0018": {
-        "text": "CAJERO:",
-        "confidence": 94.42
+        "text": "AMEZCUA",
+        "confidence": 94.73
     },
     "poly_0019": {
-        "text": "10702/2024 01.13 PM",
-        "confidence": 93.57
+        "text": "CAJERO:",
+        "confidence": 93.96
+    },
+    "poly_0020": {
+        "text": "10/02/2024 01:13 PM",
+        "confidence": 91.99
     }
 }

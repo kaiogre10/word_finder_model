@@ -1,158 +1,178 @@
 {
     "poly_0000": {
-        "text": "USTED AH0RRO: $325.20",
-        "confidence": 95.24
+        "text": "USTED AHORRO: $325.20",
+        "confidence": 95.68
     },
     "poly_0001": {
         "text": "SU CAMBIO: $0.00",
-        "confidence": 98.62
+        "confidence": 97.59
     },
     "poly_0002": {
         "text": "PAGO CON: $447.80",
-        "confidence": 97.94
+        "confidence": 96.01
     },
     "poly_0003": {
         "text": "T0TAL: $447.80",
-        "confidence": 98.81
+        "confidence": 96.34
     },
     "poly_0004": {
-        "text": "NO. DE ARTICULOS 35",
-        "confidence": 98.83
+        "text": "NO.DE ARTICULOS: 35",
+        "confidence": 97.52
     },
     "poly_0005": {
         "text": "SIA COUCHE",
-        "confidence": 99.57
+        "confidence": 95.56
     },
     "poly_0006": {
-        "text": "$5.22 $156.60",
-        "confidence": 99.8
+        "text": "$156.60",
+        "confidence": 99.99
     },
     "poly_0007": {
-        "text": "PAPEL FANTA",
-        "confidence": 99.78
+        "text": "$5.22",
+        "confidence": 99.99
     },
     "poly_0008": {
-        "text": "30",
-        "confidence": 99.84
+        "text": "PAPEL FANTA",
+        "confidence": 99.51
     },
     "poly_0009": {
-        "text": "0",
-        "confidence": 98.03
+        "text": "30",
+        "confidence": 99.97
     },
     "poly_0010": {
-        "text": "MA ECON C/1",
-        "confidence": 99.85
+        "text": "0",
+        "confidence": 98.55
     },
     "poly_0011": {
-        "text": "$69.90",
-        "confidence": 99.98
+        "text": "MA ECON C/1",
+        "confidence": 99.65
     },
     "poly_0012": {
         "text": "$69.90",
-        "confidence": 99.98
+        "confidence": 99.99
     },
     "poly_0013": {
-        "text": "TIJERA P RO",
-        "confidence": 97.6
+        "text": "$69.90",
+        "confidence": 99.99
     },
     "poly_0014": {
-        "text": "0",
-        "confidence": 97.5
+        "text": "TIJERA P RO",
+        "confidence": 98.98
     },
     "poly_0015": {
-        "text": "$21.60",
-        "confidence": 99.97
+        "text": "1",
+        "confidence": 99.92
     },
     "poly_0016": {
-        "text": "$21.60",
-        "confidence": 99.96
+        "text": "0",
+        "confidence": 96.82
     },
     "poly_0017": {
-        "text": "VALVULA C/1",
-        "confidence": 99.81
+        "text": "$21.60",
+        "confidence": 99.99
     },
     "poly_0018": {
-        "text": "N C/50",
-        "confidence": 97.92
+        "text": "$21.60",
+        "confidence": 99.99
     },
     "poly_0019": {
-        "text": "$54.90",
-        "confidence": 99.98
+        "text": "VALVULA C/1",
+        "confidence": 99.66
     },
     "poly_0020": {
-        "text": "$54.90",
-        "confidence": 99.98
+        "text": "1",
+        "confidence": 99.91
     },
     "poly_0021": {
-        "text": "CHINA AM CA",
-        "confidence": 99.84
+        "text": "N C/50",
+        "confidence": 91.61
     },
     "poly_0022": {
-        "text": "P 44X40 C/6",
-        "confidence": 94.65
+        "text": "$54.90",
+        "confidence": 99.99
     },
     "poly_0023": {
-        "text": "$75.50",
-        "confidence": 98.73
+        "text": "$54.90",
+        "confidence": 99.99
     },
     "poly_0024": {
-        "text": "$75.50",
-        "confidence": 99.97
-    },
-    "poly_0025": {
-        "text": "CINTA TRANS",
-        "confidence": 99.2
-    },
-    "poly_0026": {
-        "text": "EM C/100",
-        "confidence": 98.71
-    },
-    "poly_0027": {
-        "text": "NARIO 09 DI",
-        "confidence": 99.22
-    },
-    "poly_0028": {
-        "text": "$69.30",
-        "confidence": 99.96
-    },
-    "poly_0029": {
-        "text": "$69.30",
-        "confidence": 99.95
-    },
-    "poly_0030": {
-        "text": "HOJA CTA CA",
-        "confidence": 99.78
-    },
-    "poly_0033": {
-        "text": "CANT DESCRIPCION PRECIO IMPORTE",
-        "confidence": 96.96
-    },
-    "poly_0034": {
-        "text": "1269",
-        "confidence": 99.85
-    },
-    "poly_0035": {
-        "text": "TICKET NO",
-        "confidence": 99.83
-    },
-    "poly_0036": {
-        "text": "MZ",
-        "confidence": 98.31
-    },
-    "poly_0037": {
-        "text": "CAJERO",
-        "confidence": 99.44
-    },
-    "poly_0038": {
-        "text": "1251",
+        "text": "CHINA AM CA",
         "confidence": 98.13
     },
+    "poly_0025": {
+        "text": "P 44X40 C/6",
+        "confidence": 99.59
+    },
+    "poly_0026": {
+        "text": "$75.50",
+        "confidence": 99.95
+    },
+    "poly_0027": {
+        "text": "$75.50",
+        "confidence": 99.98
+    },
+    "poly_0028": {
+        "text": "CINTA TRANS",
+        "confidence": 96.06
+    },
+    "poly_0029": {
+        "text": "EM C/100",
+        "confidence": 99.72
+    },
+    "poly_0030": {
+        "text": "NARIO 09 DI",
+        "confidence": 99.0
+    },
+    "poly_0031": {
+        "text": "$69.30",
+        "confidence": 99.99
+    },
+    "poly_0032": {
+        "text": "$69.30",
+        "confidence": 99.99
+    },
+    "poly_0033": {
+        "text": "HOJA CTA CA",
+        "confidence": 92.9
+    },
+    "poly_0036": {
+        "text": "IMPORTE",
+        "confidence": 99.96
+    },
+    "poly_0037": {
+        "text": "PRECIO",
+        "confidence": 99.85
+    },
+    "poly_0038": {
+        "text": "CANT. DESCRIPCION",
+        "confidence": 97.29
+    },
     "poly_0039": {
-        "text": "NOTAS DE VENTA",
-        "confidence": 99.54
+        "text": "1269",
+        "confidence": 99.92
     },
     "poly_0040": {
-        "text": "16/01/2024 11 31 AM",
-        "confidence": 99.13
+        "text": "TICKET NO:",
+        "confidence": 99.96
+    },
+    "poly_0041": {
+        "text": "MZ",
+        "confidence": 98.79
+    },
+    "poly_0042": {
+        "text": "CAJERO:",
+        "confidence": 99.89
+    },
+    "poly_0043": {
+        "text": "A1251",
+        "confidence": 95.92
+    },
+    "poly_0044": {
+        "text": "NOTAS DE VENTA",
+        "confidence": 98.9
+    },
+    "poly_0045": {
+        "text": "16/01/2024 11:31 AM",
+        "confidence": 98.6
     }
 }
