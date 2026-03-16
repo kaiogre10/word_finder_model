@@ -38,7 +38,7 @@
       "pedido"
     ],
     "NombreCliente": [
-      "cliente no",
+      "cliente",
       "socio",
       "cte"
     ],
@@ -57,9 +57,9 @@
       "precio",
       "producto",
       "ps",
-      "cu",
       "pu",
       "p unit",
+      "unit",
       "p.u.c.d",
       "sku"
     ]

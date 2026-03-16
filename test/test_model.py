@@ -209,8 +209,8 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                 if not poly_data:
                     continue
                 ptext = poly_data.get("text", "")
-                text = perturb(ptext)
-                # text = ptext
+                # text = perturb(ptext)
+                text = ptext
                 if text:
                     results = wf.find_keywords(text)
                     if results:
