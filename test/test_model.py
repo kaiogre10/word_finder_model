@@ -208,7 +208,10 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
             for poly_id, poly_data in polygons.items():
                 if not poly_data:
                     continue
-                ptext = poly_data.get("text", "")
+                ptext: str = poly_data.get("text", "").strip()
+                if ptext.isdigit():
+                    continue
+
                 # text = perturb(ptext)
                 text = ptext
                 if text:

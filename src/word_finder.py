@@ -146,12 +146,12 @@ class WordFinder:
                                     continue
 
                                 if sub == cand:
-                                    penalty = self._length_penalty(q, cand)
+                                    penalty = self._length_penalty(sub, cand)
                                     final_score = 1.0 * penalty
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-                                    penalty = self._length_penalty(q, cand)
+                                    penalty = self._length_penalty(sub, cand)
                                     final_score *= penalty
 
                                 if final_score > best_score_for_cand:
