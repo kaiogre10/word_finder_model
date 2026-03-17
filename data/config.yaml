@@ -15,3 +15,9 @@ field_conversion_map:
   - 'FolioDocumento': 4
   - "NombreCliente": 5
   - "HeaderWords": 6
+
+[
+  {"text": "CANT", "norm_text": "cant", "key_field": 6, "key_word": "cant", "similarity": 1.0, "start": 0, "end": 4},
+  {"text": ".",    "norm_text": "",    "key_field": None, "key_word": "", "similarity": 0.0, "start": 4, "end": 5},
+  {"text": "DESCRIPCION", "norm_text": "descripcion", "key_field": 6, "key_word": "descripcion", "similarity": 1.0, "start": 5, "end": 16},
+]
