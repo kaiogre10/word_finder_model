@@ -56,59 +56,78 @@ class WordFinder:
 
             single = False
             if isinstance(text, str):
-                queue = [text]
+                # Si es un string, lo dividimos en "palabras" respetando espacios y símbolos
+                words = re.findall(r"[\w']+|[.,!?;]", text)
+                queue = words
                 single = True
             else:
                 queue = list(text)
 
             results: List[Dict[str, Any]] = []
-            assigned_fields: Set[int] = set()
-
-            while queue:
-                s = queue.pop(0)
+            
+            # Procesamos cada palabra o token de la cola
+            for s in queue:
                 if not s:
                     continue
 
                 q = self._normalize(s)
+                
+                # Si la palabra normalizada está vacía (ej. un punto), la tratamos como no-keyword
                 if not q:
+                    results.append({
+                        "text": s,
+                        "norm_text": "",
+                        "key_field": None,
+                        "key_word": "",
+                        "similarity": 0.0,
+                        "start": 0,
+                        "end": len(s)
+                    })
                     continue
 
-                # FILTRO GLOBAL: No usa assigned_fields
-                # if self.check_full_vectors(q):
-                #     logger.info(f"Ruido temprano: '{text}'")
-                #     return []
-
+                # --- Lógica de búsqueda de keywords existente ---
                 if q in self.noise_words:
-                    logger.debug(f"Ruido temprano: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
+                    logger.debug(f"Ruido temprano: '{s}'")
+                    # Aunque sea ruido, la incluimos en el output como no-keyword
+                    results.append({
+                        "text": s,
+                        "norm_text": q,
+                        "key_field": None,
+                        "key_word": "noise",
+                        "similarity": 0.0,
+                        "start": 0,
+                        "end": len(s)
+                    })
                     continue
 
                 if not self._is_potential_keyword(q):
+                    results.append({
+                        "text": s,
+                        "norm_text": q,
+                        "key_field": None,
+                        "key_word": "",
+                        "similarity": 0.0,
+                        "start": 0,
+                        "end": len(s)
+                    })
                     continue
-
-                # ELIMINACIÓN DE RUIDO: No usa assigned_fields
-                q_cleaned, removed_noise = self._remove_noise_substrings(q)
-                if removed_noise:
+                
+                q_cleaned, _ = self._remove_noise_substrings(q)
+                if q_cleaned != q:
                     q = q_cleaned
 
                 if self.check_full_word(text=q, place="noise"):
                     if not q:
                         continue
-
+                
                 found_matches_for_s: List[Dict[str, Any]] = []
-
-                # OPTIMIZACIÓN: Construir índice invertido de n-gramas del texto 'q' una sola vez
                 q_grams_idx: Dict[str, List[int]] = {}
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     for idx, gram in enumerate(self._ngrams(q, n)):
                         q_grams_idx.setdefault(gram, []).append(idx)
 
-                # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
                 for cand, (key_field, grams_cand) in self.all_ngrams.items():
-                    if key_field != 6 and key_field in assigned_fields:
-                        continue
-
                     cand_len = len(cand)
-                    # Encontrar posiciones donde coinciden n-gramas del candidato
                     hit_positions: List[int] = []
                     for n, grams in grams_cand.items():
                         for g in grams:
@@ -120,46 +139,29 @@ class WordFinder:
 
                     best_score_for_cand: float = 0.1
                     best_sub_details: Dict[str, int] = {}
-
-                    # Agrupamos posiciones cercanas para no probar la misma zona mil veces
                     sorted_unique_hits = sorted(list(set(hit_positions)))
-
-                    # Definimos el rango de tamaños de ventana a probar
                     min_w = max(1, cand_len - self.window_flex)
                     max_w = cand_len + self.window_flex
 
-                    # Iteramos sobre los puntos de inicio de los n-gramas coincidentes
                     for hit_start_pos in sorted_unique_hits:
-                        # Probamos ventanas de diferentes tamaños centradas cerca del 'hit'
                         for w in range(min_w, max_w + 1):
-                            # El inicio de la ventana debe permitir que el 'hit' esté dentro
-                            # Probamos algunos desplazamientos para la ventana
                             for offset in range(-self.window_flex, 1):
                                 start = hit_start_pos + offset
                                 end = start + w
-
                                 if start < 0 or end > len(q):
                                     continue
-
                                 sub = q[start:end]
                                 if not sub:
                                     continue
-
                                 if sub == cand:
-                                    penalty = self._length_penalty(sub, cand)
-                                    final_score = 1.0 * penalty
+                                    final_score = 1.0 * self._length_penalty(sub, cand)
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-                                    penalty = self._length_penalty(sub, cand)
-                                    final_score *= penalty
-
+                                    final_score *= self._length_penalty(sub, cand)
                                 if final_score > best_score_for_cand:
                                     best_score_for_cand = final_score
-                                    best_sub_details = {
-                                        "start": start,
-                                        "end": end
-                                    }
+                                    best_sub_details = {"start": start, "end": end}
 
                     if best_score_for_cand > self.threshold:
                         found_matches_for_s.append({
@@ -167,61 +169,47 @@ class WordFinder:
                             "key_word": cand,
                             "similarity": best_score_for_cand,
                             "text": s,
-                            "norm_ocr_text": q,
-                            "start": best_sub_details["start"],
-                            "end": best_sub_details["end"]
+                            "norm_text": q,
+                            "start": best_sub_details.get("start", 0),
+                            "end": best_sub_details.get("end", len(s))
                         })
-
-                # Después de comprobar todos los candidatos, agrupar y seleccionar el mejor por campo
+                
                 if found_matches_for_s:
-                    best_match_by_field: Dict[int, Dict[str, Any]] = {}
-
-                    for match in found_matches_for_s:
-                        field = match["key_field"]
-
-                        if field not in best_match_by_field:
-                            best_match_by_field[field] = match
-                        else:
-                            if field == 6:
-                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
-                            else:
-                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
-
-                    for field in best_match_by_field.keys():
-                        if field != 6:
-                            assigned_fields.add(field)
-
-                    final_matches = self._resolve_ambiguity_by_full_word(list(best_match_by_field.values()))
-
-                    if final_matches:
-                        best_match = final_matches[0]
+                    # Usamos la lógica de desambiguación para encontrar el mejor match para la palabra 's'
+                    best_matches = self._resolve_ambiguity_by_full_word(found_matches_for_s)
+                    if best_matches:
+                        # Tomamos el mejor y lo añadimos a los resultados
+                        best_match = best_matches[0]
+                        # Nos aseguramos que el texto original 's' esté en el resultado
+                        best_match["text"] = s
+                        best_match["norm_text"] = q
                         results.append(best_match)
-                        
-                        start = best_match.get("start")
-                        end = best_match.get("end")
+                    else:
+                        # Si después de resolver la ambigüedad no queda nada, es un no-match
+                        results.append({
+                            "text": s, "norm_text": q, "key_field": None, "key_word": "", 
+                            "similarity": 0.0, "start": 0, "end": len(s)
+                        })
+                else:
+                    # Si no hubo ningún match potencial, es un no-match
+                    results.append({
+                        "text": s, "norm_text": q, "key_field": None, "key_word": "", 
+                        "similarity": 0.0, "start": 0, "end": len(s)
+                    })
 
-                        if start is not None and end is not None:
-                            left_part = q[:start].strip()
-                            right_part = q[end:].strip()
-
-                            if left_part:
-                                queue.append(left_part)
-                            if right_part:
-                                queue.append(right_part)
-
-                            logger.debug(
-                                f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
-                        
-                        # # Eliminar los índices antes de agregar a resultados finales
-                        # best_match.pop("start", None)
-                        # best_match.pop("end", None)
-                        # results.append(best_match)
+            # Re-calculamos start y end para que sean consecutivos en el output final
+            current_pos = 0
+            for res in results:
+                text_len = len(res["text"])
+                res["start"] = current_pos
+                res["end"] = current_pos + text_len
+                # Añadimos un espacio para el siguiente token, simulando el texto original
+                current_pos += text_len + 1 
 
             if single:
-                if results:
-                    logger.debug(f"RESULTS: {results}")
-                return results if results else []
+                logger.info(f"RESULTS: {results}")
             return results
+
         except Exception as e:
             logger.error(f"Error buscando palabras clave: '{e}'", exc_info=True)
             return []
