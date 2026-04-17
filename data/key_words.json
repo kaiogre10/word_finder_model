@@ -21,7 +21,8 @@
       "importe total"
     ],
     "Subtotal": [
-      "subtotal"
+      "subtotal",
+      "subt"
     ],
     "FolioDocumento": [
       "ticket",
@@ -65,6 +66,7 @@
   "noise_words": [
     "documento",
     "expedido",
+    "expendio",
     "computo",
     "punto",
     "pun",

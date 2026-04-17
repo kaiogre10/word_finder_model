@@ -11,9 +11,8 @@ logger = logging.getLogger(__name__)
 class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
-        params = config
-        self.ngrams: Tuple[int, int] = params["char_ngrams"]
-        self.top_ngrams_fraction: int = params.get("top_ngrams_fraction", {})
+        self.ngrams: Tuple[int, int] = config["char_ngrams"]
+        self.top_ngrams_fraction: int = config.get("top_ngrams_fraction", {})
         
     def train_all_vectorizers(self, key_words: Dict[str, List[str]], noise_words: List[str], field_conversion_map_list: List[Dict[str, int]]):
         # Construir vocabulario normalizado y mapeo variant_to_field
@@ -41,7 +40,8 @@ class TrainModel:
                 all_ngrams[s] = (field_id, ngrams_structure)
 
                 all_words.append(s)
-        
+
+        logger.info(f"ALL WORDS: {all_words}")
         global_words = sorted(all_words, key=len, reverse=True)
         #logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(global_words)
@@ -169,7 +169,10 @@ class TrainModel:
         try:
             if not s:
                 return ""
-            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
+            # Eliminar espacios al borde y convertir puntos
+            s = s.lower()
+            s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
+            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
             # Convertir cualquier cosa que NO sea letra o espacio en un ESPACIO
             q = re.sub(r"[^a-z\s]+", " ", q)
             # Limpiar espacios múltiples / extremos

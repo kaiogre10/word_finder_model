@@ -39,6 +39,7 @@ try:
         model = pickle.load(f)
 except Exception as e:
     logger.info(f"Error: {e}", exc_info=True)
+
 base_queries: List[str] = [
     "ticketrazon", "preciocantidad", "detalleconcepto", "referenciaproducto",
     "servicioprecio", "subtotalhora", "cantidadsku", "importemodelo",
@@ -77,25 +78,43 @@ def swap_chars(s: str) -> str:
 def replace_char(s: str) -> str:
     if not s: return s
     i = random.randrange(len(s))
-    return s[:i] + random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+-=[]{}|;':\",./<>?`~áéíóúàèìòùâêîôûäëïöüñçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÄËÏÖÜÑÇ") + s[i+1:]
+    return s[:i] + random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!¨~°¬@#$%^&*()_+-=[]{}|;':\",./<>?`~áéíóúàèìòùâêîôûäëïöüñçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÄËÏÖÜÑÇ") + s[i+1:]
 
-def perturb(s: str) -> str:
+def perturb(s: str, grade: int) -> str:
     ops = [delete_char, swap_chars, replace_char]
-    f = random.choice(ops)
-    return f(s)
+    if not grade:
+        f = random.choice(ops)
+        return f(s)
+    # Aplica aleatoriamente 'grade' perturbaciones
+    new_s = s
+    for _ in range(grade):
+        f = random.choice(ops)
+        new_s = f(new_s)
+    return new_s
 
 # Generar queries con ruido
 timenow = datetime.now()
 random_seed = datetime.timestamp(timenow)
 num_seed =str(random_seed)[-2:]
-# logger.info(f"seed: {random_seed}, recorte: {num_seed}")
+logger.info(f"seed: {random_seed}, recorte: {num_seed}")
 
 random.seed(num_seed)
 text: List[str] = []
 for q in base_queries and base_queries2:
     text.append(q)
     for _ in range(3):
-        text.append(perturb(q))
+        text.append(perturb(q, []))
+
+def test_text_norm(texts: List[str]):
+    for text in texts:
+        ptext = perturb(text, 2)
+        norm_text = wf.text_normalize(ptext)
+        if norm_text == ptext:
+            logger.debug(f"SIN NORMALIZACIÓN: '{ptext}'")
+            continue
+        else:
+            logger.info(f"NORMALIZACIÓN: '{ptext}' -> '{norm_text}")
+    return True
 
 def log_model_summary(wf: WordFinder):
     try:
@@ -282,8 +301,6 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
                     logger.warning(f"No se encontró texto válido en {os.path.basename(file_path)}")
                     continue
                 
-                logger.debug(f"Líneas con texto: {len(all_text)}")
-                
                 time_doc = time.perf_counter()
                 results = wf.find_keywords(all_text)
                 time_doc_end = time.perf_counter()
@@ -346,15 +363,9 @@ if __name__ == "__main__":
     # logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
         # Prueba con diferentes inputs
-#    text = ["total", "iva", "rfc", "folio", "cliente", "fecha", "subtotal", "encabezados"]
-        # total_r = 0
-        # for q in text:
-        #     result = wf.find_keywords(q)
-        #     total_r += 1
-        #     if result:
-        #         logger.debug(f"Texto'{q}': {result}")
-        # logger.info(f"Total: {total_r}")
-        # logger.warning("error")
+    # logger.info("TESTEANDO NORMALIZACIÓN")
+    # if test_text_norm(base_queries2):
+    #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
 
         # # logger.debug("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
 
@@ -374,6 +385,6 @@ if __name__ == "__main__":
         #     )
 
         # logger.debug("\n" + "="*80 + "\nEND OF RETURN VALUE TESTING\n" + "="*80)
-    logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
+    # logger.info(f"Testing acabado en: {time.perf_counter()-time0:.6f}s")
         # logger.debug("\n5. USING DEBUG METHOD:\n" + "-" * 60)
         # cleanup_project_cache(PROJECT_ROOT)

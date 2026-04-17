@@ -5,9 +5,13 @@ import pickle
 import re
 import unicodedata
 import time
-from typing import List, Any, Dict, Tuple, Set
+from typing import List, Any, Dict, Tuple, Set, FrozenSet
 
 logger = logging.getLogger(__name__)
+
+_space_pattern = re.compile(r"\s+")
+_space_clean_pattern = re.compile(r"[^a-z\s]+")
+_nom_pattern= re.compile(r'(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])')
 
 class WordFinder:
     def __init__(self, model_path: str, set_params: bool):
@@ -15,23 +19,26 @@ class WordFinder:
         if set_params:
             """Aquí va una función que obtendría los parametros de configuración del master_config
             pero me da flojera escribirla así que solo dejaré un log y no cambiaré el parametro "set_params"""
-            logger.info(f"Parametros establecidos y cargados manualmente")
+            logger.debug(f"Parametros establecidos y cargados manualmente")
 
         params: Dict[str, Any] = model.get("params", {})
-        noise_filter: Dict[str, Any] = model.get("noise_filter", {})
+        noise_filter = model.get("noise_filter", {})
         global_filter = model.get("global_filter", {})
-
+        
         self.all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = model.get("all_ngrams", {})
-        self.global_words: List[str] = model["global_words"]
-        self.noise_words: Set[str] = set(model["noise_words"])
+        self.global_words: FrozenSet[str] = frozenset(model["global_words"])
+        self.noise_words: FrozenSet[str] = frozenset(model["noise_words"])
+        
         self.global_filter_threshold: float = params.get("global_filter_threshold", {})
         self.noise_grams: List[Dict[int, List[str]]] = noise_filter["noise_grams"]
-        self.noise_array: List[np.ndarray[Any, np.dtype[np.uint8]]] = noise_filter["noise_array"]
+        
         self.threshold: float = params.get("threshold_similarity", {})
         self.ngrams: Tuple[int, int] = params["char_ngrams"]
         self.window_flex: int = params.get("window_flexibility", {})
         self.forb_match: float = params.get("forb_match", {})
         self.min_diff: float = params.get("min_diff", {})
+        
+        self.noise_array: List[np.ndarray[Any, np.dtype[np.uint8]]] = noise_filter["noise_array"]
         self.global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = global_filter.get("global_matrices", {})
 
     def _load_model(self, model_path: str) -> Dict[str, Any]:
@@ -43,9 +50,9 @@ class WordFinder:
                 self.model: Dict[str, Any] = pickle.load(f)
             if not isinstance(self.model, dict):  # type: ignore
                 raise ValueError("El pickle no tiene el formato esperado (dict).")
-            logger.info(f"Modelo cargado en: '{time.perf_counter() - t0:.6f}s'")
+            logger.debug(f"Modelo cargado en: '{time.perf_counter() - t0:.6f}s'")
             return self.model
-        except Exception as e:
+        except ExceptionGroup as e:
             logger.error(f"Error al cargar el modelo {e}", exc_info=True)
             raise
 
@@ -53,81 +60,67 @@ class WordFinder:
         try:
             if not text:
                 return []
+            
+            if text in self.noise_words:
+                logger.info(f"Ruido inmediato: {text}")
+                return []
 
             single = False
             if isinstance(text, str):
-                # Si es un string, lo dividimos en "palabras" respetando espacios y símbolos
-                words = re.findall(r"[\w']+|[.,!?;]", text)
-                queue = words
+                queue = [text]
                 single = True
             else:
                 queue = list(text)
 
             results: List[Dict[str, Any]] = []
-            
-            # Procesamos cada palabra o token de la cola
-            for s in queue:
+            assigned_fields: Set[int] = set()
+
+            while queue:
+                s = queue.pop(0)
                 if not s:
                     continue
-
-                q = self._normalize(s)
                 
-                # Si la palabra normalizada está vacía (ej. un punto), la tratamos como no-keyword
+                if s in self.noise_words:
+                    logger.info(f"Ruido temprano: '{list(self.noise_words).pop(list(self.noise_words).index(s))}'")
+                    continue
+                
+                q = self.text_normalize(s)
+                # logger.debug(f"TEXTO NORMALIZADO: '{s}' -> '{q}'")
                 if not q:
-                    results.append({
-                        "text": s,
-                        "norm_text": "",
-                        "key_field": None,
-                        "key_word": "",
-                        "similarity": 0.0,
-                        "start": 0,
-                        "end": len(s)
-                    })
                     continue
 
-                # --- Lógica de búsqueda de keywords existente ---
                 if q in self.noise_words:
-                    logger.debug(f"Ruido temprano: '{s}'")
-                    # Aunque sea ruido, la incluimos en el output como no-keyword
-                    results.append({
-                        "text": s,
-                        "norm_text": q,
-                        "key_field": None,
-                        "key_word": "noise",
-                        "similarity": 0.0,
-                        "start": 0,
-                        "end": len(s)
-                    })
+                    logger.info(f"Ruido temprano 2: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
                     continue
 
                 if not self._is_potential_keyword(q):
-                    results.append({
-                        "text": s,
-                        "norm_text": q,
-                        "key_field": None,
-                        "key_word": "",
-                        "similarity": 0.0,
-                        "start": 0,
-                        "end": len(s)
-                    })
+                    logger.debug(f"Texto no paso filtro global: {q}")
                     continue
-                
-                q_cleaned, _ = self._remove_noise_substrings(q)
-                if q_cleaned != q:
+
+                # ELIMINACIÓN DE RUIDO: No usa assigned_fields
+                q_cleaned, removed_noise = self._remove_noise_substrings(q)
+                if removed_noise:
                     q = q_cleaned
 
-                if self.check_full_word(text=q, place="noise"):
-                    if not q:
-                        continue
-                
+                if q in self.noise_words:
+                    logger.info(f"Ruido temprano 3: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
+                    continue
+
                 found_matches_for_s: List[Dict[str, Any]] = []
+
+                # OPTIMIZACIÓN: Construir índice invertido de n-gramas del texto 'q' una sola vez
                 q_grams_idx: Dict[str, List[int]] = {}
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     for idx, gram in enumerate(self._ngrams(q, n)):
                         q_grams_idx.setdefault(gram, []).append(idx)
 
+                # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
                 for cand, (key_field, grams_cand) in self.all_ngrams.items():
+                    if key_field != 6 and key_field in assigned_fields:
+                        continue
+
                     cand_len = len(cand)
+                    # Encontrar posiciones donde coinciden n-gramas del candidato
                     hit_positions: List[int] = []
                     for n, grams in grams_cand.items():
                         for g in grams:
@@ -137,31 +130,48 @@ class WordFinder:
                     if not hit_positions:
                         continue
 
-                    best_score_for_cand: float = 0.1
+                    best_score_for_cand: float = 0.0
                     best_sub_details: Dict[str, int] = {}
+
+                    # Agrupamos posiciones cercanas para no probar la misma zona mil veces
                     sorted_unique_hits = sorted(list(set(hit_positions)))
+
+                    # Definimos el rango de tamaños de ventana a probar
                     min_w = max(1, cand_len - self.window_flex)
                     max_w = cand_len + self.window_flex
 
+                    # Iteramos sobre los puntos de inicio de los n-gramas coincidentes
                     for hit_start_pos in sorted_unique_hits:
+                        # Probamos ventanas de diferentes tamaños centradas cerca del 'hit'
                         for w in range(min_w, max_w + 1):
+                            # El inicio de la ventana debe permitir que el 'hit' esté dentro
+                            # Probamos algunos desplazamientos para la ventana
                             for offset in range(-self.window_flex, 1):
                                 start = hit_start_pos + offset
                                 end = start + w
+
                                 if start < 0 or end > len(q):
                                     continue
+
                                 sub = q[start:end]
                                 if not sub:
                                     continue
-                                if sub == cand:
-                                    final_score = 1.0 * self._length_penalty(sub, cand)
+                                
+                                elif sub == cand:
+                                    # penalty = self._length_penalty(sub, cand_len)
+                                    penalty = self._length_penalty(sub, cand)
+                                    final_score = 1.0 * penalty
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-                                    final_score *= self._length_penalty(sub, cand)
+                                final_score *= self._length_penalty(sub, cand)
+
                                 if final_score > best_score_for_cand:
                                     best_score_for_cand = final_score
-                                    best_sub_details = {"start": start, "end": end}
+                                    best_sub_details = {
+                                        "start": start,
+                                        "end": end
+                                    }
 
                     if best_score_for_cand > self.threshold:
                         found_matches_for_s.append({
@@ -169,47 +179,53 @@ class WordFinder:
                             "key_word": cand,
                             "similarity": best_score_for_cand,
                             "text": s,
-                            "norm_text": q,
-                            "start": best_sub_details.get("start", 0),
-                            "end": best_sub_details.get("end", len(s))
+                            "norm_ocr_text": q,
+                            "start": best_sub_details["start"],
+                            "end": best_sub_details["end"]
                         })
-                
+                # Después de comprobar todos los candidatos, agrupar y seleccionar el mejor por campo
                 if found_matches_for_s:
-                    # Usamos la lógica de desambiguación para encontrar el mejor match para la palabra 's'
-                    best_matches = self._resolve_ambiguity_by_full_word(found_matches_for_s)
-                    if best_matches:
-                        # Tomamos el mejor y lo añadimos a los resultados
-                        best_match = best_matches[0]
-                        # Nos aseguramos que el texto original 's' esté en el resultado
-                        best_match["text"] = s
-                        best_match["norm_text"] = q
+                    best_match_by_field: Dict[int, Dict[str, Any]] = {}
+
+                    for match in found_matches_for_s:
+                        field = match["key_field"]
+
+                        if field not in best_match_by_field:
+                            best_match_by_field[field] = match
+                        else:
+                            if field == 6:
+                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
+                            else:
+                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
+
+                    for field in best_match_by_field.keys():
+                        if field != 6:
+                            assigned_fields.add(field)
+
+                    final_matches = self._resolve_ambiguity_by_full_word(list(best_match_by_field.values()))
+
+                    if final_matches:
+                        best_match = final_matches[0]
                         results.append(best_match)
-                    else:
-                        # Si después de resolver la ambigüedad no queda nada, es un no-match
-                        results.append({
-                            "text": s, "norm_text": q, "key_field": None, "key_word": "", 
-                            "similarity": 0.0, "start": 0, "end": len(s)
-                        })
-                else:
-                    # Si no hubo ningún match potencial, es un no-match
-                    results.append({
-                        "text": s, "norm_text": q, "key_field": None, "key_word": "", 
-                        "similarity": 0.0, "start": 0, "end": len(s)
-                    })
 
-            # Re-calculamos start y end para que sean consecutivos en el output final
-            current_pos = 0
-            for res in results:
-                text_len = len(res["text"])
-                res["start"] = current_pos
-                res["end"] = current_pos + text_len
-                # Añadimos un espacio para el siguiente token, simulando el texto original
-                current_pos += text_len + 1 
+                        start = best_match.get("start")
+                        end = best_match.get("end")
 
+                        if start is not None and end is not None:
+                            left_part = q[:start].strip()
+                            right_part = q[end:].strip()
+
+                            if left_part:
+                                queue.append(left_part)
+                            if right_part:
+                                queue.append(right_part)
+
+                            logger.debug(f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
             if single:
-                logger.info(f"RESULTS: {results}")
+                if results:
+                    logger.debug(f"RESULTS: {results}")
+                return results if results else []
             return results
-
         except Exception as e:
             logger.error(f"Error buscando palabras clave: '{e}'", exc_info=True)
             return []
@@ -333,7 +349,7 @@ class WordFinder:
 
         if total_ngrams_cand == 0.0:
             return 0.0
-
+        
         return total_score / total_ngrams_cand
 
     def _is_potential_keyword(self, q: str) -> bool:
@@ -341,7 +357,7 @@ class WordFinder:
             if not q:
                 return False
 
-            if self.check_full_word(text=q, place="global"):
+            if q in self.global_words:
                 return True
 
             # OPTIMIZACIÓN: Convertir string completo a integers UNA VEZ
@@ -419,19 +435,18 @@ class WordFinder:
                             sub = cleaned[j:j + w]
 
                             if sub == noise_word:
-                                similarity = 1.0
+                                similarity = 1.0 * self._length_penalty(sub, noise_word)
                             else:
                                 grams_sub = self._build_query_grams(sub)
                                 similarity = self._score_hybrid_greedy(grams_forbidden, grams_sub)
-                            # Penalización simétrica
+                                # Penalización simétrica
                             similarity *= self._length_penalty(sub, noise_word)
 
                             if similarity > self.forb_match:
                                 cleaned = (cleaned[:j] + " " + cleaned[j + w:]).strip()
-                                cleaned = re.sub(r"\s+", " ", cleaned).strip()
+                                cleaned = _space_pattern.sub(" ", cleaned).strip()
                                 removed_noise.append(sub)
-                                logger.debug(
-                                    f"SUBSTRING ELIMINADO: '{sub}' | Similitud: {similarity:.4f} | RUIDO ORIG: '{noise_word}'")
+                                logger.debug(f"SUBSTRING ELIMINADO: '{sub}' | Similitud: {similarity:.4f} | RUIDO ORIG: '{noise_word}'")
                                 found_any = True
                                 break
                         if found_any:
@@ -442,29 +457,21 @@ class WordFinder:
             logger.error(f"Error eliminando substrings de ruido: {e}", exc_info=True)
             return text, []
 
-    def check_full_word(self, text: str, place: str) -> bool:
-        if place == "global":
-            return text in set(self.global_words)
-        elif place == "noise":
-            return text in set(self.noise_words)
-        else:
-            logger.warning(f"Error en parámetro 'place': {place}, se retornará True intencionalmente")
-            return True
-
-    def _normalize(self, s: str) -> str:
+    def text_normalize(self, s: str) -> str:
         try:
             if not s:
                 return ""
-            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8').lower()
-            # Convertir cualquier cosa que NO sea letra o espacio en un ESPACIO
-            q = re.sub(r"[^a-z\s]+", " ", q)
-            # Limpiar espacios múltiples / extremos
-            q = re.sub(r"\s+", " ", q).strip()
-            return q
-        except Exception as e:
-            logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
+            s = s.lower()                                   # 1. Entra el texto y convertimos a minusuculas
+            s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")        # 2. Convertimos letras con con puntuación a su versión estandar, NO ELIMINAMOS PUNTUACIÓN SOLO TRATAMOS CON ALFABÉTICOS
+            s = _nom_pattern.sub("", s)                     # 3. Eliminar especiales con el patrón definido internos juntando los caracteres.
+            s = _space_clean_pattern.sub(" ", s)            # 4. Ahora sí eliminamos puntuación y números convirtiendolos en espacios sin juntar aún
+            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')     # 5. Normalizamos ASCII para estandarizar
+            return _space_pattern.sub(" ", q).strip()       # 6. Normalizar espacios dobles que se hayan podido generar
+            
+        except UnicodeError as e:
+            logger.error(f"Error limpiando texto: {e}", exc_info=True)
         return ""
-
+    
     def _update_best_match(self, current_best: Dict[str, Any], match: Dict[str, Any]) -> Dict[str, Any]:
         """
         Decide si el nuevo match es mejor que el actual según las reglas de similitud y longitud.
@@ -475,46 +482,12 @@ class WordFinder:
             if len(match["key_word"]) > len(current_best["key_word"]):
                 return match
         return current_best
-
+    
     def _length_penalty(self, a: str, b: str) -> float:
         """Penalización simétrica por diferencia de longitud."""
-        la, lb = len(a), len(b)
-        if la == 0 or lb == 0:
+        if not a or not b:
             return 0.0
+        la, lb = len(a), len(b)
         if la == lb:
             return 1.0
         return min(la, lb) / max(la, lb)
-
-    def vectorice_word(self, text: str) -> np.ndarray[Any, np.dtype[np.uint8]]:
-        return np.array([ord(char) for char in text], dtype=np.uint8)
-
-    def check_full_vectors(self, text: str) -> bool:
-        vect_text = self.vectorice_word(text)
-        vec_len = len(vect_text)
-
-        lens = [len(array) for array in self.noise_array]
-        if not vec_len in lens:
-            return False
-        
-        mask = lens.index(vec_len) 
-        if not mask:
-            logger.info(f"Texto no coincide en largo")
-            return False
-        
-        cand = self.noise_array[mask]  # Sin list comprehension
-        sims = np.sum(vect_text == cand)
-        similarity = sims / vec_len
-        # revect_text = "".join(chr(sim) for sim in sims)
-
-        # logger.info(f"SIMS: {sims}")
-
-        similarity = sims.size / vec_len if sims.size > 0 else 0
-
-        if similarity > self.forb_match:
-            cand_str = "".join(chr(c) for c in cand)
-            logger.debug(f"Similitud '{similarity}' para '{text}' con: '{cand_str}'")
-            return True
-        else:
-            logger.debug(f"Similitud insufuciente: '{similarity}' para '{text}'")
-
-            return False
