@@ -24,44 +24,33 @@ class TrainModel:
         try:
             global_vocab: Dict[Tuple[int, int], Dict[str, List[str]]] = {}
             all_ngrams: List[str] = []
-            
+            map_ngrams: Dict[str, List[List[int]]] = {}
             for field_id, (_, words) in enumerate(key_words.items(), 1):
                 for id, (word, words_list) in enumerate(words.items(), 1):
                     norm_word = self._normalize(word)
                     index = (field_id, id)
-                            
+                    for_matrixes: List[List[int]] = []
                     for n in range(self.ngrams[0], self.ngrams[1] + 1):
                         n_gramas = self._ngrams(norm_word, n)
-                
+                        for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
                         words_list.extend(n_gramas)
                         all_ngrams.extend(n_gramas)
-                    # ngrams_list.append(words_list)
+                        map_ngrams[norm_word] = for_matrixes
+                    logger.info(f"SHAPE INDES: {map_ngrams}")
+                        
                     global_vocab[index] = {norm_word: words_list}
             
-            # logger.info("GLOBQL:\n"f"{global_vocab}")
+            # logger.info("GLOBQL:\n"f"{total_matrixes}")
             if global_vocab:
                 
                 all_words = [list(w.keys())[0] for w in global_vocab.values()]
                 counts = Counter(all_ngrams)
                 gngrams = list(counts.keys())
                 
-                # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
-                min_n = self.ngrams[0]
-                total_ngrams_all_sizes = sum(counts.values()) # Todos los ngramas sin filtrar
-                filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
+                # n_gngrams = [len(g) for g in gngrams if len(g) == ]
+                    
                 
-                # 2. Filtrar solo ngramas con frecuencia absoluta > 2 para poblar la matriz
-                # gngrams_scaled = [
-                #     (ng, score) for ng, score in gngrams_scaled
-                #     if freqs[gngrams.index(ng)] > 2
-                # ]
-                # gngrams_scaled2 = [ng[0] for ng in gngrams_scaled if freqs[gngrams.index(ng[0])]> 2]
-                
-                
-                # logger.info(f"NGRAMS SCALED '{len(gngram_scaled)}'\n"f" SCALED 2 '{len(gngrams_scaled2)}'")
-                
-                # array_map = np.array([w for w in global_vocab.keys()])
-                # map_grams: List[Any] = []
+                # map_grams: List[TupleAny] = []
                 # for idx, wrd in global_vocab.items():
                 #     # logger.info("\n"f"{idx}")
                 #     for w in wrd.keys():
@@ -69,9 +58,14 @@ class TrainModel:
                 #         if w, _ in gngrams_scaled:
                 #             # if grams in list_words:
                 #             logger.info(f"IDX: {idx} | {w} ->")
-                            
-                            
-                # logger.info(f"{gngram_scaled}")
+                
+                # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
+                min_n = self.ngrams[0]
+                total_ngrams_all_sizes = sum(counts.values()) # Todos los ngramas sin filtrar
+                filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
+                
+                # array_map = np.array([w for w in global_vocab.keys()])
+                
                 global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
@@ -99,7 +93,7 @@ class TrainModel:
                 for matrix in global_matrices.values():
                     logger.info(f"Tamaño de la matriz: {matrix.shape}")
 
-                logger.info("Matriz:\n"f"{global_matrices.get(2) }")
+                # logger.info("Matriz:\n"f"{global_matrices.get(2) }")
                 return (global_vocab, global_matrices,)
 
         except Exception as e:
@@ -115,7 +109,7 @@ class TrainModel:
             for i, noise_word in enumerate(noise_words_sorted):
                 if not noise_word:
                     continue
-                noise_scalars = np.array([ord(char) for char in noise_word], dtype=np.uint8)
+                noise_scalars = np.array([ord(char) for char in noise_word], dtype=np.uint16)
                 idx = np.atleast_1d(np.array(int(i), copy=True))
                 array_word = np.concatenate([idx, noise_scalars])
                 noise_array.append(array_word)
