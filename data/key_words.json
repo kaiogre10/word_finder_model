@@ -1,67 +1,67 @@
 {
   "key_words": {
-    "MontoTotalDocumento": [
-      "total",
-      "monto total",
-      "total a pagar",
-      "importe total"
-    ],
-    "TotalProductos": [
-      "total de articulos",
-      "total de unidades",
-      "cantidad de articulos",
-      "no articulos",
-      "no de articulos",
-      "no de piezas",
-      "no de pz",
-      "no de unidades",
-      "piezas totales",
-      "pzas totales",
-      "articulos vendidos",
-      "articulos totales"
-    ],    
-    "Subtotal": [
-      "subtotal",
-      "subt"
-    ],
-    "FolioDocumento": [
-      "ticket",
-      "folio",
-      "registro no",
-      "pedido no",
-      "nota no",
-      "numero de pedido",
-      "registro",
-      "orden no",
-      "orden de compra",
-      "pedido"
-    ],
-    "NombreCliente": [
-      "cliente",
-      "socio",
-      "cte"
-    ],
-    "HeaderWords": [
-      "articulos",
-      "cantidad",
-      "cant",
-      "clave",
-      "codigo",
-      "concepto",
-      "costo",
-      "descripcion",
-      "detalle",
-      "importe",
-      "monto",
-      "precio",
-      "producto",
-      "ps",
-      "pu",
-      "p unit",
-      "unit",
-      "p.u.c.d",
-      "sku"
-    ]
+    "MontoTotalDocumento": {
+      "total": [],
+      "monto total": [],
+      "total a pagar": [],
+      "importe total": []
+    },
+    "TotalProductos": {
+      "total de articulos": [],
+      "total de unidades": [],
+      "cantidad de articulos": [],
+      "no articulos": [],
+      "no de articulos": [],
+      "no de piezas": [],
+      "no de pz": [],
+      "no de unidades": [],
+      "piezas totales": [],
+      "pzas totales": [],
+      "articulos vendidos": [],
+      "articulos totales": []
+    },    
+    "Subtotal": {
+      "subtotal": [],
+      "subt": []
+    },
+    "FolioDocumento": {
+      "ticket": [],
+      "folio": [],
+      "registro no": [],
+      "pedido no": [],
+      "nota no": [],
+      "numero de pedido": [],
+      "registro": [],
+      "orden no": [],
+      "orden de compra": [],
+      "pedido": []
+    },
+    "NombreCliente": {
+      "cliente": [],
+      "socio": [],
+      "cte": []
+    },
+    "HeaderWords": {
+      "articulos": [],
+      "cantidad": [],
+      "cant": [],
+      "clave": [],
+      "codigo": [],
+      "concepto": [],
+      "costo": [],
+      "descripcion": [],
+      "detalle": [],
+      "importe": [],
+      "monto": [],
+      "precio": [],
+      "producto": [],
+      "ps": [],
+      "pu": [],
+      "p unit": [],
+      "unit": [],
+      "p.u.c.d": [],
+      "sku": []
+    }
   },
   "noise_words": [
     "documento",

@@ -4,8 +4,7 @@ import time
 import logging
 import unicodedata
 from typing import List, Dict, Any, Tuple
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.preprocessing import MaxAbsScaler
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -14,87 +13,76 @@ class TrainModel:
         self.project_root = project_root
         self.ngrams: Tuple[int, int] = config["char_ngrams"]
         self.top_ngrams_fraction: int = config.get("top_ngrams_fraction", {})
-        self.field_conversion_map: Dict[str, int] = config.get("field_conversion_map", {})
         
-    def train_all_vectorizers(self, key_words: Dict[str, List[str]], noise_words: List[str]):
-        # # Construir vocabulario normalizado y mapeo variant_to_field
-        # all_words: List[str] = []
+    def train_all_vectorizers(self, key_words: Dict[str, Dict[str, List[str]]], noise_words: List[str]):
         
-        # all_ngrams: Dict[str, Tuple[int, Dict[int, List[str]]]] = {}
-
-        
-                
-        #         all_words.append(s)
-
-        # logger.info(f"ALL WORDS: {}")
-        # global_words = sorted(all_words, key=len, reverse=True)
-        #logger.info(f"All ngrams: {all_ngrams}")
         global_filter = self._train_global(key_words)
-
-        # logger.info(f" noise: {(noise_words_sorted)}")
         noise_filter = self._train_noise_filter(noise_words)
-
-        # Retornamos all_ngrams actualizado y eliminamos variant_to_field del return
         return global_filter, noise_filter
     
-    def _train_global(self, key_words: Dict[str, List[str]]):
+    def _train_global(self, key_words: Dict[str, Dict[str, List[str]]]):
         try:
-            global_words: List[Tuple[int, str]] = []
-            global_vocab: List[str] = []
-            for field_id, (_, words) in enumerate(key_words.items(), 1):
-                for word in words:
-                    norm_word = self._normalize(word)
-                    for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                        global_vocab.extend(self._ngrams(norm_word, n))
-                    global_words.append((field_id, norm_word))                
+            global_vocab: Dict[Tuple[int, int], Dict[str, List[str]]] = {}
+            all_ngrams: List[str] = []
             
+            for field_id, (_, words) in enumerate(key_words.items(), 1):
+                for id, (word, words_list) in enumerate(words.items(), 1):
+                    norm_word = self._normalize(word)
+                    index = (field_id, id)
+                            
+                    for n in range(self.ngrams[0], self.ngrams[1] + 1):
+                        n_gramas = self._ngrams(norm_word, n)
+                
+                        words_list.extend(n_gramas)
+                        all_ngrams.extend(n_gramas)
+                    # ngrams_list.append(words_list)
+                    global_vocab[index] = {norm_word: words_list}
+            
+            # logger.info("GLOBQL:\n"f"{global_vocab}")
             if global_vocab:
-                global_counter = CountVectorizer(
-                    strip_accents="unicode",
-                    lowercase=True,
-                    ngram_range=(self.ngrams[0], self.ngrams[1]),
-                    analyzer="char",
-                    binary=True,
-                    dtype=np.uint8
-                )
-
-                Xg_counts: np.ndarray[str, np.dtype[np.uint8]] = global_counter.fit_transform(global_vocab)
-                gngrams = global_counter.get_feature_names_out(str(Xg_counts))
-
-                freqs: np.ndarray[Any, np.dtype[np.float32]] = Xg_counts.sum(axis=0).A1
-
-                scaler = MaxAbsScaler()
-                freq_array = freqs.reshape(-1, 1)
-                scaled_freqs = scaler.fit_transform(freq_array).ravel()
-
-                gngram_scaled: Dict[str, float] = {
-                    ngram: float(s)
-                    for ngram, s in zip(gngrams, scaled_freqs)
-                }
-
-                gngrams_scaled: List[Tuple[str, float]] = sorted(gngram_scaled.items(), key=lambda x: x[1], reverse=True)
-
+                
+                all_words = [list(w.keys())[0] for w in global_vocab.values()]
+                counts = Counter(all_ngrams)
+                gngrams = list(counts.keys())
+                
                 # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
                 min_n = self.ngrams[0]
-                total_ngrams_all_sizes = len(gngrams)  # Todos los ngramas sin filtrar
+                total_ngrams_all_sizes = sum(counts.values()) # Todos los ngramas sin filtrar
                 filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
-
+                
                 # 2. Filtrar solo ngramas con frecuencia absoluta > 2 para poblar la matriz
-                gngrams_scaled = [
-                    (ng, score) for ng, score in gngrams_scaled
-                    if freqs[gngrams.index(ng)] > 2
-                ]
-
+                # gngrams_scaled = [
+                #     (ng, score) for ng, score in gngrams_scaled
+                #     if freqs[gngrams.index(ng)] > 2
+                # ]
+                # gngrams_scaled2 = [ng[0] for ng in gngrams_scaled if freqs[gngrams.index(ng[0])]> 2]
+                
+                
+                # logger.info(f"NGRAMS SCALED '{len(gngram_scaled)}'\n"f" SCALED 2 '{len(gngrams_scaled2)}'")
+                
+                # array_map = np.array([w for w in global_vocab.keys()])
+                # map_grams: List[Any] = []
+                # for idx, wrd in global_vocab.items():
+                #     # logger.info("\n"f"{idx}")
+                #     for w in wrd.keys():
+                #         # logger.info("\n"f"{w}")
+                #         if w, _ in gngrams_scaled:
+                #             # if grams in list_words:
+                #             logger.info(f"IDX: {idx} | {w} ->")
+                            
+                            
+                # logger.info(f"{gngram_scaled}")
                 global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
                 for n in range(self.ngrams[0], self.ngrams[1] + 1):
                     # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
-                    ngrams_of_size = [ng for ng, _score in gngrams_scaled if len(ng) == n]
+                    ngrams_of_size = [ng for ng in gngrams if len(ng) == n]
                     filas_n = max(1, int(filas_max_n * min_n / n))
                     base_ngrams = ngrams_of_size[:filas_n]
 
                     # Extras: keywords de longitud exacta n que no estén ya en la base
-                    short_keywords = sorted({w for w in global_words if len(w) == n})
+                    short_keywords = sorted([w for w in all_words if len(w)==n])
                     base_set = set(base_ngrams)
+
                     extras = [w for w in short_keywords if w not in base_set]
 
                     if extras:
@@ -111,9 +99,8 @@ class TrainModel:
                 for matrix in global_matrices.values():
                     logger.info(f"Tamaño de la matriz: {matrix.shape}")
 
-                return {
-                    "global_matrices": global_matrices,
-                }
+                logger.info("Matriz:\n"f"{global_matrices.get(2) }")
+                return (global_vocab, global_matrices,)
 
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
@@ -128,7 +115,7 @@ class TrainModel:
             for i, noise_word in enumerate(noise_words_sorted):
                 if not noise_word:
                     continue
-                noise_scalars = np.array([int(ord(char)) for char in noise_word], dtype=np.uint8)
+                noise_scalars = np.array([ord(char) for char in noise_word], dtype=np.uint8)
                 idx = np.atleast_1d(np.array(int(i), copy=True))
                 array_word = np.concatenate([idx, noise_scalars])
                 noise_array.append(array_word)
@@ -146,7 +133,7 @@ class TrainModel:
             noise_filter: Tuple[List[np.ndarray[Any, np.dtype[np.uint8]]], Dict[int, Dict[str, Any]]] = (
                 noise_array, noise_grams_per_word
             )
-            logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
+            # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
             return noise_filter
 
         except Exception as e:
@@ -159,17 +146,14 @@ class TrainModel:
                 return ""
             # Eliminar espacios al borde y convertir puntos
             s = s.lower()
+            s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
             s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
+            s = re.sub(r"[^a-z\s]+", " ", s)
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
-            # Convertir cualquier cosa que NO sea letra o espacio en un ESPACIO
-            q = re.sub(r"[^a-z\s]+", " ", q)
-            # Limpiar espacios múltiples / extremos
-            q = re.sub(r"\s+", " ", q).strip()
-            q = ''.join(c for c in q if 32 <= ord(c) <= 126)
-            return q
+            return re.sub(r"\s+", " ", q).strip()
         except Exception as e:
             logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
-        return ""
+        return ""        
 
     def _ngrams(self, s: str, n: int) -> List[str]:
         if n <= 0 or not s:
