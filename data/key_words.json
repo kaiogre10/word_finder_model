@@ -1,5 +1,11 @@
 {
   "key_words": {
+    "MontoTotalDocumento": [
+      "total",
+      "monto total",
+      "total a pagar",
+      "importe total"
+    ],
     "TotalProductos": [
       "total de articulos",
       "total de unidades",
@@ -13,13 +19,7 @@
       "pzas totales",
       "articulos vendidos",
       "articulos totales"
-    ],
-    "MontoTotalDocumento": [
-      "total",
-      "monto total",
-      "total a pagar",
-      "importe total"
-    ],
+    ],    
     "Subtotal": [
       "subtotal",
       "subt"

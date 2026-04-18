@@ -158,7 +158,7 @@ class WordFinder:
                                     continue
                                 
                                 elif sub == cand:
-                                    # penalty = self._length_penalty(sub, cand_len)
+                                    # penalty = self._length_penalty(w, cand_len)
                                     penalty = self._length_penalty(sub, cand)
                                     final_score = 1.0 * penalty
                                 else:
@@ -324,7 +324,7 @@ class WordFinder:
                     else:
                         sim = self._ngram_similarity(gc, gs)
                     # Penalización simétrica
-                    sim *= self._length_penalty(gc, gs)
+                    # sim *= self._length_penalty(gc, gs)
 
                     if sim > 0.0:
                         possible_matches.append((sim, i, j))
@@ -435,7 +435,7 @@ class WordFinder:
                             sub = cleaned[j:j + w]
 
                             if sub == noise_word:
-                                similarity = 1.0 * self._length_penalty(sub, noise_word)
+                                similarity = 1.0 * self._length_penalty(cleaned, noise_word)
                             else:
                                 grams_sub = self._build_query_grams(sub)
                                 similarity = self._score_hybrid_greedy(grams_forbidden, grams_sub)
@@ -443,10 +443,10 @@ class WordFinder:
                             similarity *= self._length_penalty(sub, noise_word)
 
                             if similarity > self.forb_match:
-                                cleaned = (cleaned[:j] + " " + cleaned[j + w:]).strip()
+                                cleaned = (cleaned[:j] + " " + cleaned[j + w:])
                                 cleaned = _space_pattern.sub(" ", cleaned).strip()
                                 removed_noise.append(sub)
-                                logger.debug(f"SUBSTRING ELIMINADO: '{sub}' | Similitud: {similarity:.4f} | RUIDO ORIG: '{noise_word}'")
+                                logger.info(f"SUBSTRING ELIMINADO: '{sub}' | Similitud: {similarity:.4f} | RUIDO ORIG: '{noise_word}'")
                                 found_any = True
                                 break
                         if found_any:

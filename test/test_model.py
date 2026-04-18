@@ -218,7 +218,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     time0 = time.perf_counter()
     for file_path in json_files:
         file_name = os.path.basename(file_path)
-        logger.info(f"\n--- Procesando archivo: {file_name} ---")
+        # logger.info(f"\n--- Procesando archivo: {file_name} ---")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)
@@ -243,9 +243,9 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                                             "\n ========================"
                                             )
 
-                        logger.info(f"RESULTADOS: '{poly_id}': {results}")
+                        # logger.info(f"RESULTADOS: '{poly_id}': {results}")
             
-            logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
+            logger.debug(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
                         "\n===========================================================================================================================")
 
             if matches_in_doc == 0:
@@ -255,14 +255,15 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
         total_words_processed += len(polygons.items())
         proceced_files +=1
         # Resumen final
+    total_time = time.perf_counter() - time0
     logger.info(f"\n=== RESUMEN FINAL ===")
-    logger.info(f"Archivos procesados: {proceced_files}")
+    # logger.info(f"Archivos procesados: {proceced_files}")
     logger.info(f"Total coincidencias: {total_matches} / {total_words_processed}")
     if total_words_processed > 0:
         porcentaje = (total_matches / total_words_processed) * 100
         logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
-    total_time = time.perf_counter() - time0
-    logger.info(f"Tiempo total: {total_time:.4}s, tiempo promedio: {total_time/proceced_files:.4f}s")
+    
+    logger.info(f"Tiempo total: {total_time:.6}s, tiempo promedio: {total_time/proceced_files:.6f}s")
         
 def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
     try: 
@@ -349,9 +350,7 @@ if __name__ == "__main__":
     #     logger.error(f"Error testeando: {e}", exc_info=True)
 
     try:
-        time2 = time.perf_counter()
         test_json_poligons(wf, DATA_FOLDER2)
-        logger.info(f"TIEMPO TEST POLÍGONOS: {time.perf_counter()-time2:.6f}")
     except Exception as e:
         logger.error(f"Error testeando: {e}", exc_info=True)
 
