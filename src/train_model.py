@@ -36,28 +36,30 @@ class TrainModel:
                         words_list.extend(n_gramas)
                         all_ngrams.extend(n_gramas)
                         map_ngrams[norm_word] = for_matrixes
-                    logger.info(f"SHAPE INDES: {map_ngrams}")
+                    # logger.info(f"SHAPE INDES: {map_ngrams}")
                         
                     global_vocab[index] = {norm_word: words_list}
             
-            # logger.info("GLOBQL:\n"f"{total_matrixes}")
+            # logger.info("GLOBQL:\n"f"{map_ngrams}")
             if global_vocab:
                 
                 all_words = [list(w.keys())[0] for w in global_vocab.values()]
                 counts = Counter(all_ngrams)
                 gngrams = list(counts.keys())
                 
-                # n_gngrams = [len(g) for g in gngrams if len(g) == ]
+                maped_matrix: Dict[str, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+                for mtx, matrixes in map_ngrams.items():
+                    # Crear matriz donde cada fila es un n-grama de la palabra
+                    rows = len(matrixes)
+                    cols = max(len(mat) for mat in matrixes) if matrixes else 0
                     
-                
-                # map_grams: List[TupleAny] = []
-                # for idx, wrd in global_vocab.items():
-                #     # logger.info("\n"f"{idx}")
-                #     for w in wrd.keys():
-                #         # logger.info("\n"f"{w}")
-                #         if w, _ in gngrams_scaled:
-                #             # if grams in list_words:
-                #             logger.info(f"IDX: {idx} | {w} ->")
+                    matrix_n = np.zeros((rows, cols), dtype=np.uint8)
+                    for i, mat in enumerate(matrixes):
+                        matrix_n[i, :len(mat)] = np.array(mat, dtype=np.int16)
+                    
+                    # Diccionario con palabra como clave y matriz como valor
+                    maped_matrix[mtx] = matrix_n
+                logger.info(f"MAPPED: {maped_matrix}")
                 
                 # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
                 min_n = self.ngrams[0]
@@ -94,7 +96,7 @@ class TrainModel:
                     logger.info(f"Tamaño de la matriz: {matrix.shape}")
 
                 # logger.info("Matriz:\n"f"{global_matrices.get(2) }")
-                return (global_vocab, global_matrices,)
+                return (global_vocab, global_matrices)
 
         except Exception as e:
             logger.error(f"Error entreando global: {e}", exc_info=True)
