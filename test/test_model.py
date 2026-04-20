@@ -9,17 +9,43 @@ import glob
 from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional
 
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(filename)s:%(lineno)d %(message)s'
-)
-
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CONSOLE_LEVEL = "INFO"
+FILE_LEVEL = "INFO"
+logger_root = logging.getLogger()
+logger_root.setLevel(logging.INFO)
+LOG_FILE_PATH = os.path.join(PROJECT_ROOT, "wfm.txt")
+
+CONSOLE_FORMAT = "%(asctime)s - %(filename)s:%(lineno)d - %(message)s"
+FILE_FORMAT = "%(asctime)s - %(module)s:%(lineno)d - %(message)s"
+DATE_FORMAT = "%H:%M:%S"  # Solo horas:minutos:segundos en formato 00:00:00
+
+if logger_root.hasHandlers():
+    logger_root.handlers.clear()
+    
+file_formatter = logging.Formatter(
+    fmt=FILE_FORMAT,
+    datefmt=DATE_FORMAT
+)
+
+console_formatter = logging.Formatter(
+    fmt=CONSOLE_FORMAT,
+    datefmt=DATE_FORMAT
+)
+if os.path.exists(LOG_FILE_PATH):    
+    file_handler = logging.FileHandler(LOG_FILE_PATH, mode='w', encoding='utf-8')
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(FILE_LEVEL.upper())
+    logger_root.addHandler(file_handler)
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(console_formatter)
+console_handler.setLevel(CONSOLE_LEVEL.upper())
+logger_root.addHandler(console_handler)
 
 from cache_service import cleanup_project_cache
 cleanup_project_cache(PROJECT_ROOT)
@@ -51,7 +77,7 @@ base_queries: List[str] = [
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
 
-base_queries2: List[str] = [
+text_test: List[str] = [
     "sku", "cantidad total"
     "ticket razon", "precio cantidad", "detalle concepto", "referencia producto",
     "servicio precio", "subtotal hora", "cantidadsku", "importe modelo",
@@ -63,7 +89,7 @@ base_queries2: List[str] = [
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
 # text_test = ["cantidadsku", "punto"]
-text_test = ["codigos"]
+# text_test = ["sku puntoproducto pu"]
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -102,10 +128,10 @@ num_seed =str(random_seed)[-2:]
 
 random.seed(num_seed)
 text: List[str] = []
-for q in base_queries and base_queries2:
+for q in text_test:
     text.append(q)
     for _ in range(3):
-        text.append(perturb(q, []))
+        text.append(perturb(q, 1))
 
 def test_text_norm(texts: List[str]):
     for text in texts:
@@ -341,11 +367,14 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
         logger.error(f"Error testeando: {e}", exc_info=True)
         return None
 def basic_test(text_test: List[str]):
+    timebas = time.perf_counter()
     for q in text_test:
+        # q_p = perturb(q, 1)
         results = wf.find_keywords(q)
         if not results:
             continue
         logger.info(f"Results: {results}")
+    logger.info(f"Tiempo básico: {time.perf_counter() - timebas:.6f}'s")
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
@@ -369,19 +398,14 @@ if __name__ == "__main__":
     # run_queries2(base_queries2, wf)
     # logger.info(f"TIEMPO TEST 2: {time.perf_counter()-time0:.6f}")
 
-        # Prueba con diferentes inputs
     # logger.info("TESTEANDO NORMALIZACIÓN")
     # if test_text_norm(base_queries2):
     #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
-
-    
     
     logger.info(f"PRobado sencillo")
     if basic_test(text_test):
         logger.info(f"Test basco acabdo")
-    
-
-        # # Test detallado de estructura completa
+            # # Test detallado de estructura completa
         # detailed_result = wf.find_keywords(base_queries)
         # logger.debug(
         #     f"\n\n4. DETAILED STRUCTURE ANALYSIS:\nBase queries: {base_queries}"

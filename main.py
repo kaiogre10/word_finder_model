@@ -42,7 +42,6 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(console_formatter)
 console_handler.setLevel(CONSOLE_LEVEL.upper())
 logger_root.addHandler(console_handler)
-
     
 if __name__ == "__main__":
     
