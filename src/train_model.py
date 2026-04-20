@@ -1,6 +1,6 @@
 import re
 import numpy as np
-import time
+# import time
 import logging
 import unicodedata
 from typing import List, Dict, Any, Tuple
@@ -12,6 +12,8 @@ class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
         self.ngrams: Tuple[int, int] = config["char_ngrams"]
+        self.min_ngram_size = self.ngrams[0]
+        self.max_ngram_size = (self.min_ngram_size + 1) if self.ngrams[1] == self.min_ngram_size else self.ngrams[1]
         self.top_ngrams_fraction: int = config.get("top_ngrams_fraction", {})
         
     def train_all_vectorizers(self, key_words: Dict[str, Dict[str, List[str]]], noise_words: List[str]):
@@ -21,120 +23,109 @@ class TrainModel:
         return global_filter, noise_filter
     
     def _train_global(self, key_words: Dict[str, Dict[str, List[str]]]):
-        try:
-            global_vocab: Dict[Tuple[int, int], Dict[str, List[str]]] = {}
-            all_ngrams: List[str] = []
-            map_ngrams: Dict[str, List[List[int]]] = {}
-            for field_id, (_, words) in enumerate(key_words.items(), 1):
-                for id, (word, words_list) in enumerate(words.items(), 1):
-                    norm_word = self._normalize(word)
-                    index = (field_id, id)
-                    for_matrixes: List[List[int]] = []
-                    for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                        n_gramas = self._ngrams(norm_word, n)
-                        for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
-                        words_list.extend(n_gramas)
-                        all_ngrams.extend(n_gramas)
-                        map_ngrams[norm_word] = for_matrixes
-                    # logger.info(f"SHAPE INDES: {map_ngrams}")
-                        
-                    global_vocab[index] = {norm_word: words_list}
+        global_vocab: Dict[Tuple[int, int], Dict[str, List[str]]] = {}
+        all_ngrams: List[str] = []
+        map_ngrams: Dict[str, List[List[int]]] = {}
+        for field_id, (_, words) in enumerate(key_words.items(), 1):
+            for id, (word, words_list) in enumerate(words.items(), 1):
+                norm_word = self._normalize(word)
+                index = (field_id, id)
+                # array_index = np.array(index)
+                for_matrixes: List[List[int]] = []
+                for_matrixes.append(list(index))
+                for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+                    n_gramas = self._ngrams(norm_word, n)
+                    for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
+                    words_list.extend(n_gramas)
+                    all_ngrams.extend(n_gramas)
+                    # for_matrixes.append(list(index))
+                    map_ngrams[norm_word] = for_matrixes
+                # logger.info(f"SHAPE INDES: {map_ngrams}")
+                    
+                global_vocab[index] = {norm_word: words_list}
+        
+        # logger.info("GLOBQL:\n"f"{map_ngrams}")
             
-            # logger.info("GLOBQL:\n"f"{map_ngrams}")
-            if global_vocab:
-                
-                all_words = [list(w.keys())[0] for w in global_vocab.values()]
-                counts = Counter(all_ngrams)
-                gngrams = list(counts.keys())
-                
-                maped_matrix: Dict[str, np.ndarray[Any, np.dtype[np.uint8]]] = {}
-                for mtx, matrixes in map_ngrams.items():
-                    # Crear matriz donde cada fila es un n-grama de la palabra
-                    rows = len(matrixes)
-                    cols = max(len(mat) for mat in matrixes) if matrixes else 0
-                    
-                    matrix_n = np.zeros((rows, cols), dtype=np.uint8)
-                    for i, mat in enumerate(matrixes):
-                        matrix_n[i, :len(mat)] = np.array(mat, dtype=np.int16)
-                    
-                    # Diccionario con palabra como clave y matriz como valor
-                    maped_matrix[mtx] = matrix_n
-                logger.info(f"MAPPED: {maped_matrix}")
-                
-                # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
-                min_n = self.ngrams[0]
-                total_ngrams_all_sizes = sum(counts.values()) # Todos los ngramas sin filtrar
-                filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
-                
-                # array_map = np.array([w for w in global_vocab.keys()])
-                
-                global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
-                for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                    # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
-                    ngrams_of_size = [ng for ng in gngrams if len(ng) == n]
-                    filas_n = max(1, int(filas_max_n * min_n / n))
-                    base_ngrams = ngrams_of_size[:filas_n]
+        all_words = [list(w.keys())[0] for w in global_vocab.values()]
+        counts = Counter(all_ngrams)
+        gngrams = list(counts.keys())
+        
+        maped_matrix: Dict[Tuple[int, int], np.ndarray[Any, np.dtype[np.uint8]]] = {}
+        for _, matrixes in map_ngrams.items():
+            index: Tuple[int, int] = (matrixes[0][0], matrixes[0][1])
+            cols = self.max_ngram_size
+            vals_fill = cols - 2
+            index_array_pad = np.concatenate([np.array(index), np.zeros(vals_fill, np.uint8)])
+            # logger.info(f"MAPPED: {index_array_pad.shape}")
+            # Crear matriz donde cada fila es un n-grama de la palabra
+            matrixes.remove(matrixes[0])
+            rows = len(matrixes)
+            matrix_n = np.zeros((rows, cols), dtype=np.uint8)
+            for i, mat in enumerate(matrixes):
+                matrix_n[i, :len(mat)] = np.array(mat, dtype=np.uint8)
+            
+            # Diccionario con palabra como clave y matriz como valor
+            maped_matrix[index] = matrix_n
+        # logger.info(f"MAPPED: {maped_matrix}")
+        
+        # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
+        min_n = self.min_ngram_size
+        total_ngrams_all_sizes = sum(counts.values()) # Todos los ngramas sin filtrar
+        filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
+        
+        # array_map = np.array([w for w in global_vocab.keys()])
+        
+        global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+        for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+            # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
+            ngrams_of_size = [ng for ng in gngrams if len(ng) == n]
+            filas_n = max(1, int(filas_max_n * min_n / n))
+            base_ngrams = ngrams_of_size[:filas_n]
 
-                    # Extras: keywords de longitud exacta n que no estén ya en la base
-                    short_keywords = sorted([w for w in all_words if len(w)==n])
-                    base_set = set(base_ngrams)
+            # Extras: keywords de longitud exacta n que no estén ya en la base
+            short_keywords = sorted([w for w in all_words if len(w)==n])
+            base_set = set(base_ngrams)
 
-                    extras = [w for w in short_keywords if w not in base_set]
+            extras = [w for w in short_keywords if w not in base_set]
 
-                    if extras:
-                        logger.info(f"Inyectando keywords cortas en matriz n={n}: {extras}")
+            # if extras:
+            #     logger.info(f"Inyectando keywords cortas en matriz n={n}: {extras}")
 
-                    base_matrix = self._generate_matrix(n, base_ngrams)
+            base_matrix = self._generate_matrix(n, base_ngrams)
 
-                    if extras:
-                        extras_matrix = self._generate_matrix(n, extras)
-                        global_matrices[n] = np.vstack([base_matrix, extras_matrix])
-                    else:
-                        global_matrices[n] = base_matrix
+            if extras:
+                extras_matrix = self._generate_matrix(n, extras)
+                global_matrices[n] = np.vstack([base_matrix, extras_matrix], dtype=np.uint8)
+            else:
+                global_matrices[n] = base_matrix
 
-                for matrix in global_matrices.values():
-                    logger.info(f"Tamaño de la matriz: {matrix.shape}")
+        # for matrix in global_matrices.values():
+            # logger.info(f"Tamaño de la matriz: {matrix.shape}")
 
-                # logger.info("Matriz:\n"f"{global_matrices.get(2) }")
-                return (global_vocab, global_matrices)
-
-        except Exception as e:
-            logger.error(f"Error entreando global: {e}", exc_info=True)
+        # logger.info("Matriz:\n"f"{global_matrices.get(2).shape}, }")
+        return global_vocab, global_matrices, maped_matrix
 
     def _train_noise_filter(self, noise_words: List[str]):
-        timen = time.perf_counter()
-        try:
-            noise_words_sorted = sorted(noise_words, key=len, reverse=True)
-            noise_grams_per_word: Dict[int, Dict[str, Any]] = {}
-            noise_array: List[np.ndarray[Any, np.dtype[np.uint8]]] = []
+        # timen = time.perf_counter()
+        noise_words_sorted = sorted(noise_words, key=len, reverse=True)
+        noise_filter: Dict[int, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]] = {}
 
-            for i, noise_word in enumerate(noise_words_sorted):
-                if not noise_word:
-                    continue
-                noise_scalars = np.array([ord(char) for char in noise_word], dtype=np.uint16)
-                idx = np.atleast_1d(np.array(int(i), copy=True))
-                array_word = np.concatenate([idx, noise_scalars])
-                noise_array.append(array_word)
+        for i, noise_word in enumerate(noise_words_sorted):
 
-                word_grams_dict: Dict[int, List[str]] = {}
-                for n in range(self.ngrams[0], self.ngrams[1] + 1):
-                    grams = self._ngrams(noise_word, n)
-                    if grams:
-                        word_grams_dict[n] = grams
-                noise_grams_per_word[i] = {
-                    "noise_words_indx": noise_word,
-                    "noise_grams": word_grams_dict,
-                }        
+            word_grams_dict: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+            for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+                int_grams = np.array([[ord(char) for char in ng] for ng in self._ngrams(noise_word, n)])
+                if int_grams.size > 0:
+                    word_grams_dict[n] = np.stack(int_grams)
+                    
+                # logger.info(f"{word_grams_dict}")
                 
-            noise_filter: Tuple[List[np.ndarray[Any, np.dtype[np.uint8]]], Dict[int, Dict[str, Any]]] = (
-                noise_array, noise_grams_per_word
-            )
-            # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
-            return noise_filter
-
-        except Exception as e:
-            logger.error(f"Error entreando noise filter: {e}", exc_info=True)
-            return e
+            noise_filter[i] = {
+                "noise_words": noise_word,
+                "noise_grams": word_grams_dict,
+            }        
+        # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
+        return noise_filter
 
     def _normalize(self, s: str) -> str:
         try:
@@ -147,9 +138,9 @@ class TrainModel:
             s = re.sub(r"[^a-z\s]+", " ", s)
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
             return re.sub(r"\s+", " ", q).strip()
-        except Exception as e:
-            logger.error(msg=f"Error limpiando texto: {e}", exc_info=True)
-        return ""        
+        except UnicodeError as e:
+            logger.warning(f"ERROR codificando: {e}", exc_info=True)
+        return ""
 
     def _ngrams(self, s: str, n: int) -> List[str]:
         if n <= 0 or not s:

@@ -1,5 +1,6 @@
 import os
 import logging
+import numpy as np
 import pickle
 import json
 import yaml
@@ -49,21 +50,20 @@ class ModelGenerator:
     def generate_model(self) -> Optional[Dict[str, Any]]:
         """Lee YAML, normaliza variantes, precomputa n-gramas y guarda un pickle con toda la info necesaria para WordFinder."""
         time1 = time.perf_counter()
-        key_words: Dict[str, Dict[List[str]]] = self.key_words_dict.get("key_words", {})
+        key_words: Dict[str, Dict[str, List[str]]] = self.key_words_dict.get("key_words", {})
         noise_words: List[str] = self.key_words_dict["noise_words"]
         params: Dict[str, Any] = self.config_dict.get("params", {})
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(key_words, noise_words)
-
+        
         now = datetime.now()
         model_time = now.isoformat()
                             
         model: Dict[str, Any] = {
             "params": params,
             "noise_filter": noise_filter,
-            "global_filter": global_filter,
-            "model_time": model_time,
+            "global_filter": global_filter
         }
 
         logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")

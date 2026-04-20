@@ -52,16 +52,18 @@ base_queries: List[str] = [
 ]
 
 base_queries2: List[str] = [
+    "sku", "cantidad total"
     "ticket razon", "precio cantidad", "detalle concepto", "referencia producto",
-    "servicio precio", "subtotal hora", "cantidad sku", "importe modelo",
+    "servicio precio", "subtotal hora", "cantidadsku", "importe modelo",
     "total servicio", "fecha descripcion", "articulo folio", "marca concepto",
     "iva articulo", "razon social ticket", "precio unitario codigo", "ticket xyz",
-    "total xpto", "fecha cliente abc", "importe test", "sku", "modelo prueba",
+    "total xpto", "fecha cliente abc", "importe test",  "modelo prueba",
     "precio unitario", "cantidad bar", "servicio lorem", "detalle test",
     "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
-
+# text_test = ["cantidadsku", "punto"]
+text_test = ["codigos"]
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -96,7 +98,7 @@ def perturb(s: str, grade: int) -> str:
 timenow = datetime.now()
 random_seed = datetime.timestamp(timenow)
 num_seed =str(random_seed)[-2:]
-logger.info(f"seed: {random_seed}, recorte: {num_seed}")
+# logger.info(f"seed: {random_seed}, recorte: {num_seed}")
 
 random.seed(num_seed)
 text: List[str] = []
@@ -338,6 +340,12 @@ def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
     except Exception as e:
         logger.error(f"Error testeando: {e}", exc_info=True)
         return None
+def basic_test(text_test: List[str]):
+    for q in text_test:
+        results = wf.find_keywords(q)
+        if not results:
+            continue
+        logger.info(f"Results: {results}")
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
@@ -349,10 +357,10 @@ if __name__ == "__main__":
     # except Exception as e:
     #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    try:
-        test_json_poligons(wf, DATA_FOLDER2)
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
+    # try:
+    #     test_json_poligons(wf, DATA_FOLDER2)
+    # except Exception as e:
+    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
@@ -366,7 +374,12 @@ if __name__ == "__main__":
     # if test_text_norm(base_queries2):
     #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
 
-        # # logger.debug("TESTING EXACT RETURN VALUES FROM WordFinder.find_keywords()")
+    
+    
+    logger.info(f"PRobado sencillo")
+    if basic_test(text_test):
+        logger.info(f"Test basco acabdo")
+    
 
         # # Test detallado de estructura completa
         # detailed_result = wf.find_keywords(base_queries)
