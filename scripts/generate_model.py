@@ -56,8 +56,8 @@ class ModelGenerator:
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(key_words, noise_words)
-        matrixes = global_filter[2]
-        # logger.info(f"{matrixes}")        
+        # matrixes = global_filter[2]
+        # logger.info(f"{matrixes[2]}")
         now = datetime.now()
         model_time = now.isoformat()
                             

@@ -1,8 +1,8 @@
 params:
   char_ngrams: [2, 3]
-  top_ngrams_fraction: 5
+  top_ngrams_fraction: 3
   threshold_similarity: 0.901
-  global_filter_threshold: 0.7031
+  global_filter_threshold: 0.65
   forb_match: 0.876
   window_flexibility: 3
   min_diff: 0.000009

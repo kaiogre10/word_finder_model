@@ -18,7 +18,6 @@ class TrainModel:
         self.prime = config["primes"]
         
     def train_all_vectorizers(self, key_words: Dict[str, Dict[str, List[str]]], noise_words: List[str]):
-        
         global_filter = self._train_global(key_words)
         noise_filter = self._train_noise_filter(noise_words)
         return global_filter, noise_filter
@@ -51,29 +50,26 @@ class TrainModel:
         counts = Counter(all_ngrams)
         gngrams = list(counts.keys())
         
-        # maped_matrix: Dict[Tuple[int, int], np.ndarray[Any, np.dtype[np.uint8]]] = {}
-        mapped_matrix: Dict[int, np.ndarray[Any, np.dtype[np.int32]]] = {}
+        mapped_matrix = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
+        hash_i = []
         
-        per_n_ngrams: Dict[int, List[List[int]]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
-        per_n_owners: Dict[int, List[int]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
-        
-        for _, matrixes in map_ngrams.items():
-            index: Tuple[int, int] = (matrixes[0][0], matrixes[0][1])
-            concatenated_index = (index[0] * self.prime[0]) + index[1]
-            for row in matrixes[1:]:
-                n = len(row)
-                per_n_ngrams[n].append(row)
-                per_n_owners[n].append(concatenated_index)
-        
-        for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-            if per_n_ngrams[n]:
-                ngrams_arr = np.array(per_n_ngrams[n], dtype=np.int32)
-                owner_col = np.array(per_n_owners[n], dtype=np.int32)
-                mapped_matrix[n] = np.column_stack([ngrams_arr, owner_col])
-            else:
-                mapped_matrix[n] = np.zeros((0, n + 1), dtype=np.int32)
+        for ngrams in map_ngrams.values():
+            concatenated_index = (ngrams[0][0] * self.prime[0]) + ngrams[0][1]
             
-        logger.info(f"{mapped_matrix[2]}")
+            rows = ngrams[1:]  # omite el índice [field_id, id]
+            for row in rows:
+                size = len(row)
+                if self.min_ngram_size <= size <= self.max_ngram_size:
+                    mapped_matrix[size].append(row)
+                    hash_i.append(concatenated_index)
+        hash_index = np.array(hash_i, dtype=np.uint32)
+        logger.info(f"{hash_index}")
+        for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+            if mapped_matrix[n]:
+                mapped_matrix[n] = np.array(mapped_matrix[n], dtype=np.uint8)
+            else:
+                mapped_matrix[n] = np.zeros((0, n), dtype=np.uint8)
+            
         # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
         min_n = self.min_ngram_size
         total_ngrams_all_sizes = len(gngrams) # Todos los ngramas sin filtrar
@@ -92,14 +88,12 @@ class TrainModel:
 
             extras = [w for w in short_keywords if w not in base_set]
 
-            # if extras:
-            #     logger.info(f"Inyectando keywords cortas en matriz n={n}: {extras}")
-
             base_matrix = self._generate_matrix(n, base_ngrams)
 
             if extras:
                 extras_matrix = self._generate_matrix(n, extras)
                 global_matrices[n] = np.vstack([base_matrix, extras_matrix], dtype=np.uint8)
+                # logger.info(f"Inyectando keywords cortas en matriz n={n}: {extras}")
             else:
                 global_matrices[n] = base_matrix
 
@@ -107,7 +101,7 @@ class TrainModel:
             logger.info(f"Tamaño de la matriz: {matrix.shape}")
 
         # logger.info("Matriz:\n"f"{global_matrices.get(2).shape}, }")
-        return global_vocab, global_matrices, mapped_matrix
+        return global_vocab, global_matrices, mapped_matrix, hash_index
 
     def _train_noise_filter(self, noise_words: List[str]) -> Dict[int, Dict[str, str | Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]]:
         # timen = time.perf_counter()

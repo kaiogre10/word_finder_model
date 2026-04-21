@@ -33,19 +33,18 @@ class WordFinder:
         self.forb_match: float = params.get("forb_match", {})
         self.min_diff: float = params.get("min_diff", {})
         self.primes: Tuple[int, int] = params["primes"]
-        self.p1 = self.primes[0] * self.primes[1]
         
         self.global_vocab = self._global_vocab
         self.global_matrices = self._global_matrices
-        self.all_ngrams = self._maped_matrix
+        self.maped_matrix = self._maped_matrix
         
         # self.all_ngrams = self._all_ngrams
         self.map_keys = self._map_keys
         self.global_words: FrozenSet[str] = frozenset(self._global_words)
         self.map_words = self._map_words
+        self.hash_map = self._hash_map
         
         self.noise_words = self._noise_words
-        self.noise_grams = self._noise_grams
         
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         t0 = time.perf_counter()
@@ -91,20 +90,16 @@ class WordFinder:
         return self.global_filter[1]
             
     @cached_property
-    def _maped_matrix(self) -> Dict[int, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]:
+    def _maped_matrix(self) -> Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]:
         return self.global_filter[2]
-        
-    # @cached_property
-    # def _all_ngrams(self):
-    #     return self.maped_matrix.values()
+    
+    @cached_property
+    def _hash_map(self) -> np.ndarray[Any, np.dtype[np.int32]]:
+        return self.global_filter[3]
         
     @cached_property
     def _noise_words(self) -> FrozenSet[str]:
         return frozenset([(w["noise_words"]) for w in self.noise_filter.values()]) #type: ignore
-        
-    @cached_property
-    def _noise_grams(self) -> List[Dict[int, List[str]]]:
-        return [w["noise_grams"] for w in self.noise_filter.values()] #type: ignore
     
     def find_keywords(self, text: List[str] | str) -> List[Dict[str, Any]]:
         try:
@@ -121,7 +116,7 @@ class WordFinder:
             # if text in self.global_words:
             #     k_word, key_field = self.get_key_field(text)
             #     # logger.info(f"Match temprano: '{text}' KEY_FIELD: {key_field}")
-            #     results = self.set_results(key_field, k_word, 1.0, text, text, 0, len(text))
+                # results =  self.set_results(key_field, k_word, 1.0, text, text, 0, len(text))
                 
             single = False
             if isinstance(text, str):
@@ -144,7 +139,7 @@ class WordFinder:
                     continue
 
                 if not self._is_potential_keyword(q):
-                    logger.info(f"Texto no paso filtro global: {q}")
+                    # logger.info(f"Texto no paso filtro global: {q}")
                     continue
 
                 # ELIMINACIÓN DE RUIDO: No usa assigned_fields
@@ -155,32 +150,43 @@ class WordFinder:
                 found_matches_for_s: List[Dict[str, Any]] = []
         
                 # OPTIMIZACIÓN: Construir índice invertido de n-gramas del texto 'q' una sola vez
-                a_grams = self._build_query_grams(q)
+                
                 # q_grams_idx: np.ndarray[Any, np.dtype[np.uint8]]
-                for n in range(self.ngrams_range[0], self.ngrams_range[1] + 1):
-                    # int_grams = ([[ord(char) for char in ng] for ng in self._ngrams(q, n)])
-                    int_grams = a_grams[n]
-                    q_grams_idx = np.arange(int_grams.shape[0])
-
-                    # for idx, gram in enumerate(int_grams):
-                        # q_grams_idx.setdefault(gram, []).append(idx)
-
+                # for n in range(self.ngrams_range[0], self.ngrams_range[1] + 1):
+                #     # int_grams = ([[ord(char) for char in ng] for ng in self._ngrams(q, n)])
+                #     int_grams = q_grams[n]
+                #     q_grams_idx = np.arange(int_grams.shape[0])
+                q_grams = self._build_query_grams(q)
                 # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
-                for enc in self.all_ngrams.keys():
-                    key_field, key_word = self._decode(enc) # type: ignore
-                    logger.info(f"{key_field}, {key_word}")
+                for len_mtx, grams_cand in self.maped_matrix.items():
+                    # logger.info(f"estancias finales: '{q}'\n"f"{q_grams[len_mtx]}")
+                    # logger.info("Shapes:\n"f"{matrix[len_mtx]}, {q_grams[len_mtx]}")
+                    # key_field, key_word = self._decode(enc) # type: ignore
+                    
                     # if key_field != 6 and key_field in assigned_fields:
                     #     continue
-                    logger.info(f"{grams_cand},")#\n"f"CAND: {cand}")
-                    cand_len = 50
+                    # logger.info(f"{grams_cand},\n"f"CAND: {idx_cod}")
+                    cand_len = len(q)
+                    q_ngrams = q_grams[len_mtx]
+                    # logger.info(f"{grams_cand},\n"f"CAND: {q_ngrams}")
+                    weights = np.ones(len_mtx, dtype=np.int64)
+                    weights[0] = self.primes[0]
+                    
+                    input_mask = np.sum(grams_cand.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                    global_mask = np.sum(q_ngrams.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                    matches_mask = np.intersect1d(input_mask, global_mask, assume_unique=False, return_indices=True)[1]
+                    
+                    num_match = matches_mask.shape[0]
+                    logger.info(f"MATHCCES: {num_match}, {q}")
+                    hit_positions = np.where(matches_mask)[0]
                     # Encontrar posiciones donde coinciden n-gramas del candidato
-                    hit_positions: List[int] = []
-                    for n, grams in grams_cand.items():
-                        for g in grams:
-                            if g in q_grams_idx:
-                                hit_positions.extend(q_grams_idx[g])
+                    # # hit_positions: List[int] = []
+                    # for n, grams in grams_cand.items():
+                    #     for g in grams:
+                    #         if g in q_grams_idx:
+                    #             hit_positions.extend(q_grams_idx[g])
 
-                    if not hit_positions:
+                    if hit_positions.size == 0:
                         continue
 
                     best_score_for_cand: float = 0.0
@@ -437,21 +443,23 @@ class WordFinder:
             total_soft_score = 0.0
             total_input_ngrams = 0
             for n, matrix_slice in self.global_matrices.items():
-                if self.ngrams_range[0] > word_len:
-                    total_soft_score += n
-                    continue
+                # if self.ngrams_range[0] > word_len:
+                #     total_soft_score += n
+                #     continue
                 
                 if word_len < self.ngrams_range[1]:
                     total_soft_score += n
                     continue
-                # Generar n-gramas por slicing (sin ord)
+                
                 matrix_input = q_arr[n]
                 num_input = matrix_input.shape[0]
                 total_input_ngrams += num_input
-
                 
-                input_mask = np.sum((matrix_input * self.p1).astype(np.int64), axis=1, dtype=np.int64)
-                global_mask = np.sum((matrix_slice * self.p1).astype(np.int64), axis=1, dtype=np.int64)
+                weights = np.ones(n, dtype=np.int64)
+                weights[0] = self.primes[0]
+                
+                input_mask = np.sum(matrix_input.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                global_mask = np.sum(matrix_slice.astype(np.int64) * weights, axis=1, dtype=np.int64)
                 matches_mask = np.intersect1d(input_mask, global_mask, assume_unique=False, return_indices=True)[1]
                 num_match = matches_mask.shape[0]
                 if num_match == num_input:
@@ -464,10 +472,6 @@ class WordFinder:
                 matrix_input = matrix_input[no_match_indices]
                 
                 matches = (matrix_input[:, np.newaxis, :] == matrix_slice[np.newaxis, :, :])
-                
-                if np.count_nonzero(matches) < 1:
-                    logger.info(f"Sin ningún match: {q}")
-                    continue
                         
                 sim_matrix = matches.sum(axis=2) / n
                 rows, cols = np.where(sim_matrix > 0)
@@ -575,13 +579,14 @@ class WordFinder:
         """Penalización simétrica por diferencia de longitud."""
         return 1.0 if la == lb else float(min(la, lb) / max(la, lb))
         
-    def get_key_field(self, word: str):
-        # if word:
-        for kword, word_map in self.map_words:            
-            if kword != word:
-                continue
-            return kword, word_map[0]
-        
+    def get_key_field(self, word: str) -> Tuple[str, int]:
+        if self.map_words:
+            for kword, word_map in self.map_words:
+                if kword != word:
+                    continue
+                return kword, word_map[0]
+        return ("", -0)
+
     def _decode(self, encoded_key: int):
         code_key = self.primes[0]
         decoded_kf = (encoded_key // code_key)

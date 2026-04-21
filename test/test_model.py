@@ -386,10 +386,10 @@ if __name__ == "__main__":
     # except Exception as e:
     #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    # try:
-    #     test_json_poligons(wf, DATA_FOLDER2)
-    # except Exception as e:
-    #     logger.error(f"Error testeando: {e}", exc_info=True)
+    try:
+        test_json_poligons(wf, DATA_FOLDER2)
+    except Exception as e:
+        logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
@@ -402,9 +402,9 @@ if __name__ == "__main__":
     # if test_text_norm(base_queries2):
     #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
     
-    logger.info(f"PRobado sencillo")
-    if basic_test(text_test):
-        logger.info(f"Test basco acabdo")
+    # logger.info(f"PRobado sencillo")
+    # if basic_test(text_test):
+    #     logger.info(f"Test basco acabdo")
             # # Test detallado de estructura completa
         # detailed_result = wf.find_keywords(base_queries)
         # logger.debug(
