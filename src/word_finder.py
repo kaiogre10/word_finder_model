@@ -109,14 +109,14 @@ class WordFinder:
             elif len(text) < 2:
                 return []
                 
-            # if text in self.noise_words:
-            #     logger.info(f"Ruido inmediato: '{text}'")
-            #     return []
+            if text in self.noise_words:
+                logger.info(f"Ruido inmediato: '{text}'")
+                return []
                 
-            # if text in self.global_words:
-            #     k_word, key_field = self.get_key_field(text)
-            #     # logger.info(f"Match temprano: '{text}' KEY_FIELD: {key_field}")
-                # results =  self.set_results(key_field, k_word, 1.0, text, text, 0, len(text))
+            if text in self.global_words:
+                k_word, key_field = self.get_key_field(text)
+                # logger.info(f"Match temprano: '{text}' KEY_FIELD: {key_field}")
+                return [self._set_results(key_field, k_word, 1.0, text, text, 0, len(text))]
                 
             single = False
             if isinstance(text, str):
@@ -127,8 +127,7 @@ class WordFinder:
                 queue = [self.text_normalize(s) for s in text if self.text_normalize(s)]
 
             results: List[Dict[str, Any]] = []
-            assigned_fields: Set[int] = set()
-
+            
             while queue:
                 q = queue.pop(0)
                 if not q:
@@ -254,15 +253,7 @@ class WordFinder:
                                     }
 
                     if best_score_for_cand > self.threshold:
-                        found_matches_for_s.append({
-                            "key_field": key_field,
-                            "key_word": cand,
-                            "similarity": best_score_for_cand,
-                            "text": s,
-                            "norm_ocr_text": q,
-                            "start": best_sub_details["start"],
-                            "end": best_sub_details["end"]
-                        })
+                        found_matches_for_s.append(self._set_results(key_field, cand, best_score_for_cand, str(text), q, best_sub_details["start"], best_sub_details["end"]))
 
                 # Después de comprobar todos los candidatos, conservar todos los matches sobre threshold
                 # y resolver solo ambigüedades reales (solapamientos/empates).
@@ -368,14 +359,11 @@ class WordFinder:
             max_ngram_range = self.ngrams_range[1]
         
         for n in range(self.ngrams_range[0], max_ngram_range + 1):
-            ngrams = self._ngrams(q, n)
+            ngrams = [[ord(char) for char in ng] for ng in self._n_grams(q, n)]
             if not ngrams:
                 continue
             gq[n] = np.array(ngrams)
         return gq
-    
-    def _ngrams(self, text: str, n: int) -> List[List[int]]:
-        return [[ord(char) for char in ng] for ng in self._n_grams(text, n)]
     
     def _n_grams(self, q: str, n: int) -> List[str]:
         try:
@@ -589,17 +577,6 @@ class WordFinder:
             logger.error(f"Error limpiando texto: {e}", exc_info=True)
         return ""
     
-    def _update_best_match(self, current_best: Dict[str, Any], match: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Decide si el nuevo match es mejor que el actual según las reglas de similitud y longitud.
-        """
-        if match["similarity"] > current_best["similarity"]:
-            return match
-        elif abs(match["similarity"] - current_best["similarity"]) < self.min_diff:
-            if len(match["key_word"]) > len(current_best["key_word"]):
-                return match
-        return current_best
-    
     def _length_penalty(self, la: int, lb: int) -> float:
         """Penalización simétrica por diferencia de longitud."""
         return 1.0 if la == lb else float(min(la, lb) / max(la, lb))
@@ -612,18 +589,20 @@ class WordFinder:
                 return kword, word_map[0]
         return ("", -0)
 
-    def _decode(self, encoded_key: int):
-        code_key = self.primes[0]
-        decoded_kf = (encoded_key // code_key)
-        decoded_kw = encoded_key - (code_key * decoded_kf)
-        
-        for word, word_map in self.map_words:
-            if (decoded_kf, decoded_kw) != word_map:
-                continue
-            return decoded_kf, word
+    def _decode(self, encoded_key: int) -> Tuple[int, str]:
+        if self.map_words:
+            code_key = self.primes[0]
+            decoded_kf = (encoded_key // code_key)
+            decoded_kw = encoded_key - (code_key * decoded_kf)
             
-    def set_results(self, key_field: int, key_word: str, similarity :float, text: str, norm_ocr_text: str, start: int, end: int) -> List[Dict[str, Any]]:
-        return [{
+            for word, word_map in self.map_words:
+                if (decoded_kf, decoded_kw) != word_map:
+                    continue
+                return decoded_kf, word
+        return (0, "")
+            
+    def _set_results(self, key_field: int, key_word: str, similarity :float, text: str, norm_ocr_text: str, start: int, end: int) -> Dict[str, Any]:
+        return {
             "key_field": key_field,
             "key_word": key_word,
             "similarity": similarity,
@@ -631,4 +610,4 @@ class WordFinder:
             "norm_ocr_text": norm_ocr_text,
             "start": start,
             "end": end
-        }]
+        }
