@@ -48,8 +48,10 @@ class TrainModel:
         all_words = [list(w.keys())[0] for w in global_vocab.values()]
         counts = Counter(all_ngrams)
         gngrams = list(counts.keys())
-        logger.info("COUNTS:\n"f"{sum(counts.values())}")
-        
+        unique_count = len([k for k, v in counts.items() if v == 1])
+        total_count = sum(counts.values())
+        logger.info(f"COUNTS:\nÚnicos: {unique_count} / Total: {total_count}")
+           
         mapped_matrix: Dict[int, Any] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         hash_i: Dict[int, List[int]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         
@@ -73,13 +75,14 @@ class TrainModel:
             # logger.info(f"{mapped_matrix.get(n).shape}")
         # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
         min_n = self.min_ngram_size
-        total_ngrams_all_sizes = len(gngrams) # Todos los ngramas sin filtrar
+        total_ngrams_all_sizes = total_count - unique_count # Todos los ngramas sin filtrar
         filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
                 
         global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-            # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
-            ngrams_of_size = [ng for ng in gngrams if len(ng) == n]
+            # Base: ngramas NO únicos (freq > 1) del tamaño n, limitados a filas_n
+            ngrams_ranked = sorted(((ng, freq) for ng, freq in counts.items() if len(ng) == n and freq > 1), key=lambda x: x[1], reverse=True)
+            ngrams_of_size = [ng for ng, _ in ngrams_ranked]
             filas_n = int(filas_max_n * min_n / n)
             base_ngrams = ngrams_of_size[:filas_n]
 
@@ -116,11 +119,8 @@ class TrainModel:
                 int_grams = np.array([[ord(char) for char in ng] for ng in self._ngrams(noise_word, n)])
                 if int_grams.size > 0:
                     word_grams_dict[n] = int_grams
-                    
-            
-                
             noise_filter[noise_word] = word_grams_dict
-        logger.info(f"{noise_filter}")
+        # logger.info(f"{noise_filter}")
         # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
         return noise_filter
 
