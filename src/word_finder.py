@@ -75,11 +75,11 @@ class WordFinder:
         
     @cached_property
     def _map_keys(self) -> List[Tuple[int, int]]:
-        return [w for w in self.global_vocab.keys()]
+        return [w for w in self._global_vocab.keys()]
             
     @cached_property
     def _global_words(self) -> List[str]:
-        return [list(w.keys())[0] for w in self.global_vocab.values()]
+        return [list(w.keys())[0] for w in self._global_vocab.values()]
     
     @cached_property
     def _map_words(self):
@@ -114,9 +114,9 @@ class WordFinder:
                 return []
                 
             if text in self.global_words:
-                k_word, key_field = self.get_key_field(text)
+                k_word, key_field = self.get_key_field(text, 0)
                 # logger.info(f"Match temprano: '{text}' KEY_FIELD: {key_field}")
-                return [self._set_results(key_field, k_word, 1.0, text, text, 0, len(text))]
+                return [self._set_results(key_field[0], k_word, 1.0, text, text, 0, len(text))]
                 
             single = False
             if isinstance(text, str):
@@ -134,7 +134,7 @@ class WordFinder:
                     continue
 
                 if q in self.noise_words:
-                    logger.info(f"Ruido temprano 2: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
+                    # logger.info(f"Ruido temprano 2: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
                     continue
 
                 if not self._is_potential_keyword(q):
@@ -180,9 +180,9 @@ class WordFinder:
                 found_matches_for_s: List[Dict[str, Any]] = []
 
                 for cand_id in candidate_ids:
-                    key_field, cand = self._decode(cand_id) # type: ignore
+                    cand, key_field = self.get_key_field("", cand_id) # type: ignore
                     cand_len = len(cand)
-                    grams_cand = self._build_query_grams(cand)
+                    grams_cand = self.get_key_word_ngrams(cand)
 
                     # Buscamos dónde coinciden en la consulta q
                     hit_positions: List[int] = []
@@ -200,8 +200,6 @@ class WordFinder:
                         
                         for idx in q_hits:
                             gram_hit = q_grams[n][idx]
-                            # Find all starting indices of this specific n-gram in the original string `q`
-                            # We search for the n-gram substring in `q`
                             sub_str = "".join(chr(c) for c in gram_hit)
                             
                             start_pos = 0
@@ -238,12 +236,12 @@ class WordFinder:
                                     continue
                                 
                                 elif sub == cand:
-                                    penalty = self._length_penalty(len(sub), cand_len)
+                                    penalty = self._length_penalty(w, cand_len)
                                     final_score = 1.0 * penalty
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-                                    final_score *= self._length_penalty(len(sub), cand_len)
+                                    final_score *= self._length_penalty(w, cand_len)
 
                                 if final_score > best_score_for_cand:
                                     best_score_for_cand = final_score
@@ -253,10 +251,9 @@ class WordFinder:
                                     }
 
                     if best_score_for_cand > self.threshold:
-                        found_matches_for_s.append(self._set_results(key_field, cand, best_score_for_cand, str(text), q, best_sub_details["start"], best_sub_details["end"]))
+                        found_matches_for_s.append(self._set_results(key_field[0], cand, best_score_for_cand, str(text), q, best_sub_details["start"], best_sub_details["end"]))
 
-                # Después de comprobar todos los candidatos, conservar todos los matches sobre threshold
-                # y resolver solo ambigüedades reales (solapamientos/empates).
+                # Después de comprobar todos los candidatos, conservar todos los matches sobre threshold y resolver solo ambigüedades reales (solapamientos/empates).
                 if found_matches_for_s:
                     final_matches = self._resolve_ambiguity_by_full_word(found_matches_for_s)
 
@@ -298,7 +295,7 @@ class WordFinder:
             norm_ocr_text = match["norm_ocr_text"]
             word_found = match["key_word"]
             grams_text = self._build_query_grams(norm_ocr_text)
-            grams_word = self._build_query_grams(word_found)
+            grams_word = self.get_key_word_ngrams(word_found)
             base_similarity = self._score_hybrid_greedy(grams_word, grams_text)
             length_penalty = self._length_penalty(len(norm_ocr_text), len(word_found))
             score_final = base_similarity * length_penalty
@@ -450,6 +447,9 @@ class WordFinder:
         try:
             if not q:
                 return False
+            if q in self.global_words:
+                return True
+                
             word_len = len(q)
             if word_len < 2:
                 return False
@@ -568,10 +568,10 @@ class WordFinder:
                 return ""
             s = s.lower()
             s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
-            s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
-            s = re.sub(r"[^a-z\s]+", " ", s)
+            s = _nom_pattern.sub("", s)
+            s = _space_clean_pattern.sub(" ", s)
             q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
-            return re.sub(r"\s+", " ", q).strip()
+            return _space_pattern.sub(" ", q).strip()
                         
         except UnicodeError as e:
             logger.error(f"Error limpiando texto: {e}", exc_info=True)
@@ -581,25 +581,39 @@ class WordFinder:
         """Penalización simétrica por diferencia de longitud."""
         return 1.0 if la == lb else float(min(la, lb) / max(la, lb))
         
-    def get_key_field(self, word: str) -> Tuple[str, int]:
-        if self.map_words:
+    def get_key_field(self, word: str, encoded_key: int) -> Tuple[str, Tuple[int, int]]:
+        if word:
             for kword, word_map in self.map_words:
                 if kword != word:
                     continue
-                return kword, word_map[0]
-        return ("", -0)
-
-    def _decode(self, encoded_key: int) -> Tuple[int, str]:
-        if self.map_words:
+                return kword, word_map
+                
+        elif encoded_key > self.primes[0]:
             code_key = self.primes[0]
             decoded_kf = (encoded_key // code_key)
             decoded_kw = encoded_key - (code_key * decoded_kf)
             
-            for word, word_map in self.map_words:
+            for kword, word_map in self.map_words:
                 if (decoded_kf, decoded_kw) != word_map:
                     continue
-                return decoded_kf, word
-        return (0, "")
+                return kword, (decoded_kf, decoded_kw)
+        return ("", (0, 0))
+        
+    def get_key_word_ngrams(self, key_word: str) -> Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]:
+        ngrams_len_dict: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+        # 1. Obtener el índice de la keyword
+        _, idx = self.get_key_field(key_word, 0)
+        field_id, id_ = idx
+        concatenated_index = (field_id * self.primes[0]) + id_
+        # 2. Para cada tamaño de ngrama
+        for n in range(self.ngrams_range[0], self.ngrams_range[1] + 1):
+            hash_arr = self.hash_map[n]
+            matrix = self.maped_matrix[n]
+            # 3. Buscar los índices donde el hash coincide
+            indices = np.where(hash_arr == concatenated_index)[0]
+            if indices.size > 0:
+                ngrams_len_dict[n] = matrix[indices]
+        return ngrams_len_dict
             
     def _set_results(self, key_field: int, key_word: str, similarity :float, text: str, norm_ocr_text: str, start: int, end: int) -> Dict[str, Any]:
         return {

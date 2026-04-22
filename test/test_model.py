@@ -77,7 +77,7 @@ base_queries: List[str] = [
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
 
-text_test: List[str] = [
+base_queries2: List[str] = [
     "sku", "cantidad total"
     "ticket razon", "precio cantidad", "detalle concepto", "referencia producto",
     "servicio precio", "subtotal hora", "cantidadsku", "importe modelo",
@@ -88,8 +88,7 @@ text_test: List[str] = [
     "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
-# text_test = ["cantidadsku", "punto"]
-# text_test = ["sku puntoproducto pu"]
+text_test = ["sku", "cantidad de articulos", "pu"]
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -246,7 +245,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     time0 = time.perf_counter()
     for file_path in json_files:
         file_name = os.path.basename(file_path)
-        logger.info(f"\n--- Procesando archivo: {file_name} ---")
+        # logger.info(f"\n--- Procesando archivo: {file_name} ---")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)
@@ -270,9 +269,9 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
                                 logger.debug(f"MATCH: {poly_id} '{text}' | {result}"
                                             "\n ========================")
 
-                        logger.info(f"RESULTADOS: '{poly_id}': {results}")
+                        # logger.info(f"RESULTADOS: '{poly_id}': {results}")
             
-            logger.info(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
+            logger.debug(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
                         "\n===========================================================================================================================")
 
             if matches_in_doc == 0:
@@ -369,10 +368,12 @@ def basic_test(text_test: List[str]):
     timebas = time.perf_counter()
     for q in text_test:
         # q_p = perturb(q, 1)
-        results = wf.find_keywords(q)
-        if not results:
-            continue
-        logger.info(f"Results: {results}")
+        ngrams = wf.get_key_word_ngrams(q)
+        logger.info(f"ngrams: {ngrams}")
+        # results = wf.find_keywords(q)
+        # if not results:
+        #     continue
+        # logger.info(f"Results: {results}")
     logger.info(f"Tiempo básico: {time.perf_counter() - timebas:.6f}'s")
 
 if __name__ == "__main__":

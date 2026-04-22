@@ -78,4 +78,4 @@ def cleanup_project_cache(project_root: str) -> None:
                     logger.error(f"Error al eliminar {file_path}: {e}")
                     return
     tempo = time.perf_counter() - t0
-    logger.info(f"Limpieza de cache completada en {tempo}")
+    logger.debug(f"Limpieza de cache completada en {tempo}")
