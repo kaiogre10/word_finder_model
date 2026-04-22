@@ -94,7 +94,7 @@ class WordFinder:
         return self.global_filter[2]
     
     @cached_property
-    def _hash_map(self) -> np.ndarray[Any, np.dtype[np.int32]]:
+    def _hash_map(self) -> Dict[int, np.ndarray[Any, np.dtype[np.uint32]]]:
         return self.global_filter[3]
         
     @cached_property
@@ -120,8 +120,8 @@ class WordFinder:
                 
             single = False
             if isinstance(text, str):
-                text = self.text_normalize(text)
-                queue = [text]
+                s = self.text_normalize(text)
+                queue = [s]
                 single = True
             else:
                 queue = [self.text_normalize(s) for s in text if self.text_normalize(s)]
@@ -148,45 +148,72 @@ class WordFinder:
                     q = q_cleaned
 
                 found_matches_for_s: List[Dict[str, Any]] = []
-        
-                # OPTIMIZACIÓN: Construir índice invertido de n-gramas del texto 'q' una sola vez
-                
-                # q_grams_idx: np.ndarray[Any, np.dtype[np.uint8]]
-                # for n in range(self.ngrams_range[0], self.ngrams_range[1] + 1):
-                #     # int_grams = ([[ord(char) for char in ng] for ng in self._ngrams(q, n)])
-                #     int_grams = q_grams[n]
-                #     q_grams_idx = np.arange(int_grams.shape[0])
                 q_grams = self._build_query_grams(q)
-                # BÚSQUEDA DE KEYWORDS: Aquí SÍ se usa assigned_fields
+                
+                # FASE 1: Intersección Matricial Rápida
+                candidate_ids: Set[int] = set()
+                
                 for len_mtx, grams_cand in self.maped_matrix.items():
-                    # logger.info(f"estancias finales: '{q}'\n"f"{q_grams[len_mtx]}")
-                    # logger.info("Shapes:\n"f"{matrix[len_mtx]}, {q_grams[len_mtx]}")
-                    # key_field, key_word = self._decode(enc) # type: ignore
-                    
-                    # if key_field != 6 and key_field in assigned_fields:
-                    #     continue
-                    # logger.info(f"{grams_cand},\n"f"CAND: {idx_cod}")
-                    cand_len = len(q)
+                    if len_mtx not in q_grams or q_grams[len_mtx].size == 0 or grams_cand.size == 0:
+                        continue
+                        
                     q_ngrams = q_grams[len_mtx]
-                    # logger.info(f"{grams_cand},\n"f"CAND: {q_ngrams}")
+                    
                     weights = np.ones(len_mtx, dtype=np.int64)
                     weights[0] = self.primes[0]
                     
                     input_mask = np.sum(grams_cand.astype(np.int64) * weights, axis=1, dtype=np.int64)
                     global_mask = np.sum(q_ngrams.astype(np.int64) * weights, axis=1, dtype=np.int64)
-                    matches_mask = np.intersect1d(input_mask, global_mask, assume_unique=False, return_indices=True)[1]
                     
-                    num_match = matches_mask.shape[0]
-                    logger.info(f"MATHCCES: {num_match}, {q}")
-                    hit_positions = np.where(matches_mask)[0]
-                    # Encontrar posiciones donde coinciden n-gramas del candidato
-                    # # hit_positions: List[int] = []
-                    # for n, grams in grams_cand.items():
-                    #     for g in grams:
-                    #         if g in q_grams_idx:
-                    #             hit_positions.extend(q_grams_idx[g])
+                    # Intersección: obtenemos TODOS los índices en grams_cand que hagan hit con algún ngrama de la query
+                    hit_mask = np.isin(input_mask, global_mask)
+                    matches_mask = np.where(hit_mask)[0]
+                    
+                    if matches_mask.size > 0:
+                        # Extraer los IDs reales de esos hits y añadirlos al set
+                        hits_ids = self.hash_map[len_mtx][matches_mask]
+                        candidate_ids.update(hits_ids.tolist())
 
-                    if hit_positions.size == 0:
+                if not candidate_ids:
+                    continue
+
+                # FASE 2: Scoring de Ventanas y Subcadenas para candidatos filtrados
+                found_matches_for_s: List[Dict[str, Any]] = []
+
+                for cand_id in candidate_ids:
+                    key_field, cand = self._decode(cand_id) # type: ignore
+                    cand_len = len(cand)
+                    grams_cand = self._build_query_grams(cand)
+
+                    # Buscamos dónde coinciden en la consulta q
+                    hit_positions: List[int] = []
+                    for n, sub_arr in grams_cand.items():
+                        if n not in q_grams:
+                            continue
+                        
+                        weights = np.ones(n, dtype=np.int64)
+                        weights[0] = self.primes[0]
+                        cand_mask = np.sum(sub_arr.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                        q_mask = np.sum(q_grams[n].astype(np.int64) * weights, axis=1, dtype=np.int64)
+                        
+                        # Buscamos las posiciones de hit dentro de la consulta 'q'
+                        q_hits = np.intersect1d(q_mask, cand_mask, assume_unique=False, return_indices=True)[1]
+                        
+                        for idx in q_hits:
+                            gram_hit = q_grams[n][idx]
+                            # Find all starting indices of this specific n-gram in the original string `q`
+                            # We search for the n-gram substring in `q`
+                            sub_str = "".join(chr(c) for c in gram_hit)
+                            
+                            start_pos = 0
+                            while True:
+                                pos = q.find(sub_str, start_pos)
+                                if pos == -1:
+                                    break
+                                hit_positions.append(pos)
+                                start_pos = pos + 1
+                    
+                    if not hit_positions:
                         continue
 
                     best_score_for_cand: float = 0.0
@@ -195,16 +222,11 @@ class WordFinder:
                     # Agrupamos posiciones cercanas para no probar la misma zona mil veces
                     sorted_unique_hits = sorted(list(set(hit_positions)))
 
-                    # Definimos el rango de tamaños de ventana a probar
                     min_w = max(1, cand_len - self.window_flex)
                     max_w = cand_len + self.window_flex
 
-                    # Iteramos sobre los puntos de inicio de los n-gramas coincidentes
                     for hit_start_pos in sorted_unique_hits:
-                        # Probamos ventanas de diferentes tamaños centradas cerca del 'hit'
                         for w in range(min_w, max_w + 1):
-                            # El inicio de la ventana debe permitir que el 'hit' esté dentro
-                            # Probamos algunos desplazamientos para la ventana
                             for offset in range(-self.window_flex, 1):
                                 start = hit_start_pos + offset
                                 end = start + w
@@ -217,13 +239,12 @@ class WordFinder:
                                     continue
                                 
                                 elif sub == cand:
-                                    # penalty = self._length_penalty(w, cand_len)
-                                    penalty = self._length_penalty(sub, cand)
+                                    penalty = self._length_penalty(len(sub), cand_len)
                                     final_score = 1.0 * penalty
                                 else:
                                     grams_sub = self._build_query_grams(sub)
                                     final_score = self._score_hybrid_greedy(grams_cand, grams_sub)
-                                final_score *= self._length_penalty(sub, cand)
+                                    final_score *= self._length_penalty(len(sub), cand_len)
 
                                 if final_score > best_score_for_cand:
                                     best_score_for_cand = final_score
@@ -242,30 +263,15 @@ class WordFinder:
                             "start": best_sub_details["start"],
                             "end": best_sub_details["end"]
                         })
-                # Después de comprobar todos los candidatos, agrupar y seleccionar el mejor por campo
+
+                # Después de comprobar todos los candidatos, conservar todos los matches sobre threshold
+                # y resolver solo ambigüedades reales (solapamientos/empates).
                 if found_matches_for_s:
-                    best_match_by_field: Dict[int, Dict[str, Any]] = {}
-
-                    for match in found_matches_for_s:
-                        field = match["key_field"]
-
-                        if field not in best_match_by_field:
-                            best_match_by_field[field] = match
-                        else:
-                            if field == 6:
-                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
-                            else:
-                                best_match_by_field[field] = self._update_best_match(best_match_by_field[field], match)
-
-                    for field in best_match_by_field.keys():
-                        if field != 6:
-                            assigned_fields.add(field)
-
-                    final_matches = self._resolve_ambiguity_by_full_word(list(best_match_by_field.values()))
+                    final_matches = self._resolve_ambiguity_by_full_word(found_matches_for_s)
 
                     if final_matches:
-                        best_match = final_matches[0]
-                        results.append(best_match)
+                        results.extend(final_matches)
+                        best_match = max(final_matches, key=lambda x: (x["similarity"], len(x["key_word"])))
 
                         start = best_match.get("start")
                         end = best_match.get("end")
@@ -279,7 +285,7 @@ class WordFinder:
                             if right_part:
                                 queue.append(right_part)
 
-                            logger.debug(f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
+                            # logger.info(f"Extracted '{best_match['key_word']}' from '{q}'. Remaining: '{left_part}', '{right_part}'")
             if single:
                 if results:
                     logger.debug(f"RESULTS: {results}")
@@ -296,39 +302,61 @@ class WordFinder:
         if len(matches) == 1:
             return matches
 
+        scored_matches: List[Dict[str, Any]] = []
         for i, match in enumerate(matches):
-            norm_ocr_text = match['norm_ocr_text']
-            word_found = match['key_word']
+            norm_ocr_text = match["norm_ocr_text"]
+            word_found = match["key_word"]
             grams_text = self._build_query_grams(norm_ocr_text)
-
-            if word_found in self.all_ngrams:
-                _, grams_word = self.all_ngrams[word_found]
-            else:
-                grams_word = self._build_query_grams(word_found)
-
-            # Calcular similitud base
+            grams_word = self._build_query_grams(word_found)
             base_similarity = self._score_hybrid_greedy(grams_word, grams_text)
-
-            # Penalización simétrica: min/max siempre da un valor entre 0 y 1 no importa cuál sea más largo, el resultado es el mismo
-            length_penalty = self._length_penalty(norm_ocr_text, word_found)
-
-            # Score final = similitud base * penalización por longitud
-            match['score_final'] = base_similarity * length_penalty
-
+            length_penalty = self._length_penalty(len(norm_ocr_text), len(word_found))
+            score_final = base_similarity * length_penalty
+            local_match = dict(match)
+            local_match["score_final"] = score_final
+            scored_matches.append(local_match)
             logger.debug(
                 "EMPATE: Match #%d: campo: %s, palabra: '%s' | score de desempate: %.6f | texto: '%s'",
-                i, match.get("key_field"), word_found, match['score_final'], norm_ocr_text
+                i, match.get("key_field"), word_found, score_final, norm_ocr_text
             )
 
-        # Encontrar el mejor match usando max() en lugar de sort()
-        best_match = max(matches, key=lambda x: (x['score_final'], len(x['key_word'])))
+        # Mantener todos; solo descartar en conflictos por solapamiento.
+        scored_matches.sort(key=lambda x: (x["score_final"], x["similarity"], len(x["key_word"])), reverse=True)
+        selected: List[Dict[str, Any]] = []
+        for cand in scored_matches:
+            start_c = int(cand.get("start", -1))
+            end_c = int(cand.get("end", -1))
+            conflict_idx = -1
+            for i, prev in enumerate(selected):
+                start_p = int(prev.get("start", -1))
+                end_p = int(prev.get("end", -1))
+                overlaps = (start_c < end_p) and (start_p < end_c)
+                if overlaps:
+                    conflict_idx = i
+                    break
 
-        logger.debug(
-            "DESEMPATE: texto '%s': campo: %s, palabra: '%s', score_final: %.6f",
-            best_match.get("text"), best_match.get("key_field"), best_match.get("key_word"),
-            best_match.get("score_final")
-        )
-        return [best_match]
+            if conflict_idx == -1:
+                selected.append(cand)
+                continue
+
+            prev = selected[conflict_idx]
+            better = (
+                cand["score_final"],
+                cand["similarity"],
+                len(cand["key_word"]),
+            ) > (
+                prev["score_final"],
+                prev["similarity"],
+                len(prev["key_word"]),
+            )
+            if better:
+                selected[conflict_idx] = cand
+
+        cleaned_selected: List[Dict[str, Any]] = []
+        for match in selected:
+            cleaned_match = dict(match)
+            cleaned_match.pop("score_final", None)
+            cleaned_selected.append(cleaned_match)
+        return cleaned_selected
 
     def _build_query_grams(self, q: str) -> Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]:
         """Construye n-gramas de la consulta retornando LISTAS (Duplicados permitidos)"""
@@ -443,11 +471,7 @@ class WordFinder:
             total_soft_score = 0.0
             total_input_ngrams = 0
             for n, matrix_slice in self.global_matrices.items():
-                # if self.ngrams_range[0] > word_len:
-                #     total_soft_score += n
-                #     continue
-                
-                if word_len < self.ngrams_range[1]:
+                if word_len < n:
                     total_soft_score += n
                     continue
                 
@@ -491,10 +515,11 @@ class WordFinder:
                             if len(used_in) == num_input:
                                 break
             if total_input_ngrams == 0:
+                # logger.info(f"'{q}' - total_input_ngrams == 0")
                 return False
             
             soft_coverage = total_soft_score / total_input_ngrams
-            # logger.info(f"'{q}' SIMILITUD GLOBAL: {soft_coverage}")
+            # logger.info(f"'{q}' SIMILITUD GLOBAL: {soft_coverage}, score={total_soft_score}, input={total_input_ngrams}")
             # logger.info(f"Tiempo del filtro: {time.perf_counter() - time_fil:.6f}'s")
             return soft_coverage > self.global_filter_threshold
 
@@ -553,13 +578,13 @@ class WordFinder:
         try:
             if not s:
                 return ""
-            s = s.lower()                                   # 1. Entra el texto y convertimos a minusuculas
-            s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")        # 2. Convertimos letras con con puntuación a su versión estandar, NO ELIMINAMOS PUNTUACIÓN SOLO TRATAMOS CON ALFABÉTICOS
-            s = _nom_pattern.sub("", s)                     # 3. Eliminar especiales con el patrón definido internos juntando los caracteres.
-            s = _space_clean_pattern.sub(" ", s)            # 4. Ahora sí eliminamos puntuación y números convirtiendolos en espacios sin juntar aún
-            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')     # 5. Normalizamos ASCII para estandarizar
-            return _space_pattern.sub(" ", q).strip()       # 6. Normalizar espacios dobles que se hayan podido generar
-            
+            s = s.lower()
+            s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
+            s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
+            s = re.sub(r"[^a-z\s]+", " ", s)
+            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
+            return re.sub(r"\s+", " ", q).strip()
+                        
         except UnicodeError as e:
             logger.error(f"Error limpiando texto: {e}", exc_info=True)
         return ""

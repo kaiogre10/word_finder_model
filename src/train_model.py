@@ -51,7 +51,7 @@ class TrainModel:
         gngrams = list(counts.keys())
         
         mapped_matrix = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
-        hash_i = []
+        hash_i = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         
         for ngrams in map_ngrams.values():
             concatenated_index = (ngrams[0][0] * self.prime[0]) + ngrams[0][1]
@@ -61,8 +61,9 @@ class TrainModel:
                 size = len(row)
                 if self.min_ngram_size <= size <= self.max_ngram_size:
                     mapped_matrix[size].append(row)
-                    hash_i.append(concatenated_index)
-        hash_index = np.array(hash_i, dtype=np.uint32)
+                    hash_i[size].append(concatenated_index)
+                    
+        hash_index = {n: np.array(hash_i[n], dtype=np.uint32) for n in hash_i}
         logger.info(f"{hash_index}")
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             if mapped_matrix[n]:
