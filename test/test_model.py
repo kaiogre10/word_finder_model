@@ -6,6 +6,7 @@ import logging
 import time
 import json
 import glob
+import numpy as np
 from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional
 
@@ -52,8 +53,8 @@ cleanup_project_cache(PROJECT_ROOT)
 
 from src.word_finder import WordFinder
 MODEL_STD = os.path.join(PROJECT_ROOT, "models", "wf_model.pkl")
-DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
-DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input2")
+DATA_FOLDER = os.path.join(PROJECT_ROOT, "input2")
+DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input")
 
 try:    
     wf: WordFinder = WordFinder(MODEL_STD, False)
@@ -88,7 +89,7 @@ base_queries2: List[str] = [
     "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
-text_test = ["sku", "cantidad de articulos", "pu"]
+text_test = ["preciofqwq pun"]
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -108,7 +109,7 @@ def replace_char(s: str) -> str:
     return s[:i] + random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!¨~°¬@#$%^&*()_+-=[]{}|;':\",./<>?`~áéíóúàèìòùâêîôûäëïöüñçÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÄËÏÖÜÑÇ") + s[i+1:]
 
 def perturb(s: str, grade: int) -> str:
-    ops = [delete_char, swap_chars, replace_char]
+    ops = [swap_chars, replace_char]
     if not grade:
         f = random.choice(ops)
         return f(s)
@@ -292,104 +293,107 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     logger.info(f"Tiempo total: {total_time:.6}s, tiempo promedio: {total_time/proceced_files:.6f}s")
         
 def test_json_lines(wf: WordFinder, DATA_FOLDER2: str):
-    try: 
-        time0 = time.perf_counter()
-        logger.info(f"\nBuscando archivos JSON en la carpeta {DATA_FOLDER2}...")
-        json_files = glob.glob(os.path.join(DATA_FOLDER2, '*.json'))
 
-        if not json_files:
-            logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER2}.")
-            return
+    time0 = time.perf_counter()
+    logger.info(f"\nBuscando archivos JSON en la carpeta {DATA_FOLDER2}...")
+    json_files = glob.glob(os.path.join(DATA_FOLDER2, '*.json'))
 
-        total_matches = 0
-        total_lines_processed = 0
+    if not json_files:
+        logger.error(f"No se encontraron archivos JSON en {DATA_FOLDER2}.")
+        return
+
+    total_matches = 0
+    total_words_processed = 0
+    proceced_files = 0
+    time0 = time.perf_counter()
+    for file_path in json_files:
+        file_name = os.path.basename(file_path)
+        # logger.info(f"\n--- Procesando archivo: {file_name} ---")
         
-        for file_path in json_files:
-            file_name = os.path.basename(file_path)
-            logger.info(f"\n--- Procesando archivo: {file_name} ---")
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
-                lines: Dict[str, Dict[str, Any]] = json.load(f)
-                matches_in_doc = 0
-                time1 = time.perf_counter()
-
-                # Extraer todos los textos del documento
-                all_text: List[str] = []
-                line_ids: List[str] = []
-                
-                for line_id, line_data in lines.items():
-                    text= line_data.get("text", "")
-                    if text:
-                        all_text.append(text.strip())
-                        line_ids.append(line_id)
-
-                # logger.info(f"Texto: {all_text}")
-                if not all_text:
-                    logger.warning(f"No se encontró texto válido en {os.path.basename(file_path)}")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            polygons: Dict[str, Dict[str, Any]] = json.load(f)
+            matches_in_doc = 0
+            time1 = time.perf_counter()
+            key_words = wf.global_words
+            for poly_id, poly_data in polygons.items():
+                if not poly_data:
                     continue
-                
-                time_doc = time.perf_counter()
-                results = wf.find_keywords(all_text)
-                time_doc_end = time.perf_counter()
-                
-                # Contar y mostrar resultados
-                if results:
-                    matches_in_doc = len([r for r in results if r])
-                    total_matches += matches_in_doc
-                    
-                    logger.debug(f"Coincidencias encontradas: {matches_in_doc}/{len(all_text)}")
-                    
-                    for i, result in enumerate(results):
-                        if result and len(result) > 0:
-                            logger.info(f"Resultado: {line_ids[i]}: {result}")
+                ptext: str = poly_data.get("text", "").strip()
+                if not ptext:
+                    continue
 
-                logger.info(f"Total de matches por documento: {matches_in_doc} / {len(lines.items())} en {time.perf_counter() - time1:.6f}s"
+                # text = perturb(ptext)
+                
+                for key_word in key_words:
+                    key_grams = wf.get_key_word_ngrams(key_word)
+                    word_grams = wf.build_query_grams(ptext)
+                    rah = list(key_grams.keys())
+                    total_sim = 0.0
+                    for i in range(min(rah), max(rah)+1):
+                        ngram = key_grams.get(i)
+                        w_gram = word_grams.get(i) 
+                        if ngram is None or w_gram is None:
+                            continue
+                        sim = wf.ngram_similarity_vec(ngram, w_gram)
+                        total_sim += np.mean(sim)
+                        # sims.append(sim)
+                    total_sim = total_sim / len(rah)
+                    if total_sim >0.90:
+                        logger.info(f"SIM: '{ptext}' -- '{q}' {total_sim}%")
+                        # logger.info("SIMS:\n"f" TOTAL: {total_sim/2}")
+                    # if results:
+                    #     matches_in_doc += len([r for r in results if r])
+                    #     for result in results:
+                    #         if result and len(result) > 0:
+                    #             logger.debug(f"MATCH: {poly_id} '{text}' | {result}"
+                    #                         "\n ========================")
+
+                        # logger.info(f"RESULTADOS: '{poly_id}': {results}")
+            
+            logger.debug(f"Total de matches por documento: {matches_in_doc} / {len(polygons.items())} en {time.perf_counter() - time1:.6f}s"
                         "\n===========================================================================================================================")
-                   
-                if matches_in_doc == 0:
-                    logger.info("No se encontraron coincidencias en este documento")
 
-                total_lines_processed += len(all_text)
-        
+            if matches_in_doc == 0:
+                logger.info("No se encontraron coincidencias en este documento")
+
+        total_matches += matches_in_doc
+        total_words_processed += len(polygons.items())
+        proceced_files +=1
         # Resumen final
-        logger.info(f"\n=== RESUMEN FINAL JSON ===")
-        logger.info(f"Archivos procesados: {len(json_files)}")
-        logger.info(f"Total líneas procesadas: {total_lines_processed}")
-        logger.info(f"Total coincidencias: {total_matches}")
-        if total_lines_processed > 0:
-            porcentaje = (total_matches / total_lines_processed) * 100
-            logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
-        logger.info(f"Tiempo promedio: {(time.perf_counter() - time0)/len(json_files):.6f}s")
-        
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
-        return None
+    total_time = time.perf_counter() - time0
+    logger.info(f"\n=== RESUMEN FINAL ===")
+    # logger.info(f"Archivos procesados: {proceced_files}")
+    logger.info(f"Total coincidencias: {total_matches} / {total_words_processed}")
+    if total_words_processed > 0:
+        porcentaje = (total_matches / total_words_processed) * 100
+        logger.info(f"Porcentaje de coincidencias: {porcentaje:.2f}%")
+    
+    logger.info(f"Tiempo total: {total_time:.6}s, tiempo promedio: {total_time/proceced_files:.6f}s")
+    return None
+    
 def basic_test(text_test: List[str]):
     timebas = time.perf_counter()
     for q in text_test:
-        # q_p = perturb(q, 1)
-        ngrams = wf.get_key_word_ngrams(q)
-        logger.info(f"ngrams: {ngrams}")
-        # results = wf.find_keywords(q)
-        # if not results:
-        #     continue
-        # logger.info(f"Results: {results}")
+        results = wf.find_keywords(q)
+        if not results:
+            continue
+        logger.info(f"Results: {results}")
     logger.info(f"Tiempo básico: {time.perf_counter() - timebas:.6f}'s")
 
 if __name__ == "__main__":
     time0 = time.perf_counter()
     wf = WordFinder(MODEL_STD, False)
     # try:
-    #     time1 = time.perf_counter()
+    # #     time1 = time.perf_counter()
     #     test_json_lines(wf, DATA_FOLDER)
-    #     logger.info(f"TIEMPO TEST LINEAS: {time.perf_counter()-time1:.6f}")
+    #     # logger.info(f"TIEMPO TEST LINEAS: {time.perf_counter()-time1:.6f}")
     # except Exception as e:
     #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    try:
-        test_json_poligons(wf, DATA_FOLDER2)
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
+    # try:
+    #     test_json_poligons(wf, DATA_FOLDER2)
+    # except Exception as e:
+    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
@@ -402,9 +406,9 @@ if __name__ == "__main__":
     # if test_text_norm(base_queries2):
     #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
     
-    # logger.info(f"PRobado sencillo")
-    # if basic_test(text_test):
-    #     logger.info(f"Test basco acabdo")
+    logger.info(f"PRobado sencillo")
+    if basic_test(text_test):
+        logger.info(f"Test basco acabdo")
             # # Test detallado de estructura completa
         # detailed_result = wf.find_keywords(base_queries)
         # logger.debug(

@@ -34,21 +34,21 @@ class TrainModel:
                 for_matrixes: List[List[int]] = []
                 for_matrixes.append(list(index))
                 for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+                    # if n == 2:
+                    #     temp_word = norm_word.replace(" ", "")
+                    # else:
+                    #     temp_word = norm_word
                     n_gramas = self._ngrams(norm_word, n)
                     for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
                     words_list.extend(n_gramas)
                     all_ngrams.extend(n_gramas)
-                    # for_matrixes.append(list(index))
                     map_ngrams[norm_word] = for_matrixes
-                # logger.info(f"SHAPE INDES: {map_ngrams}")
-                    
                 global_vocab[index] = {norm_word: words_list}
-        
-        logger.info("GLOBQL:\n"f"{map_ngrams}")
             
         all_words = [list(w.keys())[0] for w in global_vocab.values()]
         counts = Counter(all_ngrams)
         gngrams = list(counts.keys())
+        logger.info("COUNTS:\n"f"{sum(counts.values())}")
         
         mapped_matrix: Dict[int, Any] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         hash_i: Dict[int, List[int]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
@@ -62,15 +62,15 @@ class TrainModel:
                 if self.min_ngram_size <= size <= self.max_ngram_size:
                     mapped_matrix[size].append(row)
                     hash_i[size].append(concatenated_index)
-                    
+        
         hash_index: Dict[int, np.ndarray[Any, np.dtype[np.uint32]]] = {n: np.array(hash_i[n], dtype=np.uint32) for n in hash_i}
-        # logger.info(f"{hash_index}")
+        
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             if mapped_matrix[n]:
                 mapped_matrix[n] = np.array(mapped_matrix[n], dtype=np.uint8)
             else:
                 mapped_matrix[n] = np.zeros((0, n), dtype=np.uint8)
-            
+            # logger.info(f"{mapped_matrix.get(n).shape}")
         # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
         min_n = self.min_ngram_size
         total_ngrams_all_sizes = len(gngrams) # Todos los ngramas sin filtrar
@@ -80,7 +80,7 @@ class TrainModel:
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             # Base: ngramas frecuentes del tamaño n (limitados a filas_n)
             ngrams_of_size = [ng for ng in gngrams if len(ng) == n]
-            filas_n = max(1, int(filas_max_n * min_n / n))
+            filas_n = int(filas_max_n * min_n / n)
             base_ngrams = ngrams_of_size[:filas_n]
 
             # Extras: keywords de longitud exacta n que no estén ya en la base
@@ -107,7 +107,7 @@ class TrainModel:
     def _train_noise_filter(self, noise_words: List[str]) -> Dict[int, Dict[str, str | Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]]:
         # timen = time.perf_counter()
         noise_words_sorted = sorted(noise_words, key=len, reverse=True)
-        noise_filter: Dict[int, Dict[str, str | Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]] = {}
+        noise_filter: Dict[str, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]] = {}
 
         for i, noise_word in enumerate(noise_words_sorted):
 
@@ -117,12 +117,10 @@ class TrainModel:
                 if int_grams.size > 0:
                     word_grams_dict[n] = int_grams
                     
-            # logger.info(f"{noise_filter}")
+            
                 
-            noise_filter[i] = {
-                "noise_words": noise_word,
-                "noise_grams": word_grams_dict,
-            }        
+            noise_filter[noise_word] = word_grams_dict
+        logger.info(f"{noise_filter}")
         # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
         return noise_filter
 
@@ -130,7 +128,6 @@ class TrainModel:
         try:
             if not s:
                 return ""
-            # Eliminar espacios al borde y convertir puntos
             s = s.lower()
             s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
             s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
@@ -146,6 +143,7 @@ class TrainModel:
             return []
         if len(s) < n:
             return []
+        # Solo acepta ngramas que NO inician ni terminan con espacio
         return [s[i:i+n] for i in range(len(s) - n + 1)]
 
     def _generate_matrix(self, size: int, ngrams: List[str]) -> np.ndarray[Any, np.dtype[np.uint8]]:
