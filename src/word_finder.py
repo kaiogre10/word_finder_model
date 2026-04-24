@@ -110,14 +110,13 @@ class WordFinder:
                 q = queue.pop(0)
                 if not q:
                     continue
-
                 # if q in self.noise_words:
                 #     # logger.info(f"Ruido temprano 2: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
                 #     continue
 
-                # if not self._is_potential_keyword(q):
-                #     logger.info(f"Texto no paso filtro global: {q}")
-                #     continue
+                if not self._is_potential_keyword(q):
+                    # logger.info(f"Texto no paso filtro global: {q}")
+                    continue
 
                 # ELIMINACIÓN DE RUIDO: No usa assigned_fields
                 q_cleaned, removed_noise = self._remove_noise_substrings(q)
@@ -133,57 +132,80 @@ class WordFinder:
                 candidate_ids: Set[int] = set()
                 # idx_list =  [idx[1] for idx in self.inverse_index.items()]
                 
-                # q_len = len(q)
+                q_len = len(q)
                 logger.info(f"{q}")
-                
+                matrixes_votes = []
+                total_ngrams = 0
                 for size_ngram, grams_cand in self.maped_matrix.items():
                     if q_grams is None or grams_cand is None:
                         continue
                     
                     index_cands = []
-                    ngram_index = self.inverse_index[size_ngram]    
+                    ngram_index = self.inverse_index[size_ngram]
                     q_ngrams = q_grams[size_ngram]
+                    # if len(ngram_index) > len(q_ngrams):
+                    #     continue
+                    
                     for row in q_ngrams:
                         val = ngram_index.get(tuple(row))
                         if val is not None:
-                            textstring = ["".join(chr(int(c))) for c in row]
-                            logger.info(f"{textstring}, {row}, {val}")
+                            # textstring = ["".join(chr(int(c))) for c in row]
+                            # logger.info(f"{textstring}, {row}, {val}")
                             index_cands.extend(val)
                     concat_idx = np.array(index_cands)
                     
-                    # Ordenar ambos outputs de unique por frecuencia descendente
                     index_conc = np.unique(concat_idx, return_counts=True)
-                    logger.info("COUNTS:\n"f"{np.column_stack([index_conc[0], index_conc[1]])}")
+                    # logger.info("COUNTS:\n"f"{np.column_stack([index_conc[0], index_conc[1]])}")
                     
-                    sorted_idx = np.argsort(index_conc[1])[::-1]
-                    sorted_unique = index_conc[0][sorted_idx]
-                    sorted_counts = index_conc[1][sorted_idx]
-                    # logger.info("SORTED COUNTS:\n"f"{np.column_stack([sorted_unique, sorted_counts])}")
-
-                    decoded_clas = self.decode_array(sorted_unique)
-                    logger.info("Decoded_clas:\n"f"{np.column_stack([decoded_clas, sorted_counts])}")
-                    res = self.get_key_field_arr(decoded_clas)
-                    logger.info(f"{res}")
+                    # # logger.info("SORTED COUNTS:\n"f"{np.column_stack([sorted_unique, sorted_counts])}")
+                    decoded_clas = self.decode_array(index_conc[0])
+                    votes = np.column_stack([decoded_clas, index_conc[1]])
                     
-                    weights = np.ones(size_ngram, dtype=np.int64)
-                    weights[0] = self.primes[0]
+                    total_ngrams += len(q_ngrams)    
+                    matrixes_votes.extend(votes)
+                
+                total_votes = np.array(matrixes_votes)
+                keys = total_votes[:, :2]
+                unique_keys, inverse = np.unique(keys, axis=0, return_inverse=True)
+                sums = np.bincount(inverse, weights=total_votes[:, 2])
+                votes_matrix = np.column_stack([unique_keys, sums])
+                order = np.argsort(votes_matrix[:, 2])[::-1]
+                votes_matrix = votes_matrix[order]
+                # logger.info(f"{votes_matrix}")
+                
+                complete_match = np.where(votes_matrix[:, 2] == total_ngrams)[0]
+                if complete_match is not None and complete_match.size > 0:
+                    votes_matrix = votes_matrix[complete_match]
+                    logger.info("VOTES:\n"f"{votes_matrix}")
+                    kf, kw = self.get_key_field_arr(votes_matrix[:,0:2])
+                    if len(kw) > q_len:
+                        continue
+                    logger.info(f"{kf}, {kw}, {len(kw)} {q_len}")
+                    # Aquí va la lógica del return pero
                     
-                    input_mask = np.sum(grams_cand.astype(np.int64) * weights, axis=1, dtype=np.int64)
-                    global_mask = np.sum(q_ngrams.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                # for lenght, matrixes in matrixes_votes.items():
                     
-                    # Intersección: obtenemos TODOS los índices en grams_cand que hagan hit con algún ngrama de la query
-                    match_mask = np.intersect1d(input_mask, global_mask, assume_unique=False, return_indices=True)[1]
-                    num_match = match_mask.shape[0]
                     
-                    hit_mask = np.isin(input_mask, global_mask)
-                    matches_mask = np.where(hit_mask)[0]
-                    # logger.info(f"{match_mask}")
-                    # logger.info(f"INTERSECT: {num_match}, ISIN: {matches_mask.size}")
                     
-                    if matches_mask.size > 0:
-                        # Extraer los IDs reales de esos hits y añadirlos al set
-                        hits_ids = self.hash_map[size_ngram][matches_mask]
-                        candidate_ids.update(hits_ids.tolist())
+                    # weights = np.ones(size_ngram, dtype=np.int64)
+                    # weights[0] = self.primes[0]
+                    
+                    # input_mask = np.sum(grams_cand.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                    # global_mask = np.sum(q_ngrams.astype(np.int64) * weights, axis=1, dtype=np.int64)
+                    
+                    # # Intersección: obtenemos TODOS los índices en grams_cand que hagan hit con algún ngrama de la query
+                    # match_mask = np.intersect1d(input_mask, global_mask, assume_unique=False, return_indices=True)[1]
+                    # num_match = match_mask.shape[0]
+                    
+                    # hit_mask = np.isin(input_mask, global_mask)
+                    # matches_mask = np.where(hit_mask)[0]
+                    # # logger.info(f"{match_mask}")
+                    # # logger.info(f"INTERSECT: {num_match}, ISIN: {matches_mask.size}")
+                    
+                    # if matches_mask.size > 0:
+                    #     # Extraer los IDs reales de esos hits y añadirlos al set
+                    #     hits_ids = self.hash_map[size_ngram][matches_mask]
+                    #     candidate_ids.update(hits_ids.tolist())
                 
                 if not candidate_ids:
                     continue
@@ -620,7 +642,7 @@ class WordFinder:
         for key in keys:
             word_map = self.map_words.get(tuple(key))
             if word_map is not None:
-                results.append((key[0], word_map))
+                results.append((int(key[0]), word_map))
         # logger.info(f"{results}")
         return results
         

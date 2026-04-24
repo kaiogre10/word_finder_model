@@ -54,11 +54,11 @@ class TrainModel:
                     all_ngrams.extend(n_gramas)
                     map_ngrams[norm_word] = for_matrixes
         
-        
         all_words = [w for w in global_vocab.values()]
         counts = Counter(all_ngrams)
         gngrams: List[str] = sorted(counts)        # Ejemplar de cada ngrama presente
-        # logger.info(f"{global_vocab}")
+        most = counts.most_common(1)[0][1]
+        logger.info(f"{most}")
         # total_count = len(all_ngrams)                        # Cantidad total de ngramas
         # max_rows_n = int((total_count - unique_count) / self.top_ngrams_fraction)
            
