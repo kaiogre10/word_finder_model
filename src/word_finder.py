@@ -167,8 +167,6 @@ class WordFinder:
                 unique_keys, inverse = np.unique(keys, axis=0, return_inverse=True)
                 sums = np.bincount(inverse, weights=total_votes[:, -1])
                 votes_matrix = np.column_stack([unique_keys, sums])
-                order = np.argsort(votes_matrix[:, -1])[::-1]
-                votes_matrix = votes_matrix[order]
 
                 complete_match = np.where(votes_matrix[:, -1] == total_ngrams)[0]
                 if complete_match is None or complete_match.size < 1:
@@ -189,7 +187,8 @@ class WordFinder:
                     dict_cands[cand] = ngrams_cand
                 #logger.info("DICT CANDS:\n"f"{dict_cands}")
 
-                kf_matches: List[Tuple[float, int]] = []
+                kf_matches: Dict[str, Any] = []
+                total_score = 0.0
                 for cand_kf, gram_cands in dict_cands.items():
                     for i, cand_ngrams in gram_cands.items():
                         q_ngrams = q_grams[i]
@@ -198,20 +197,26 @@ class WordFinder:
                         if q_ngrams.shape[0] < rows:
                             continue
 
-                        #logger.info(f"'{q}':\n"f"{q_ngrams}")
-                        #logger.info(f"KEYWORD: '{cand}'\n"f"{cand_ngrams}")
-
                         windows = np.lib.stride_tricks.sliding_window_view(q_ngrams, (rows, i), (0, 1))
                         for idx, window in enumerate(windows):
                             windowr = window.reshape(rows, i)
                         #    logger.info("WINDOW:\n"f"{windowr}")
                             mean_match = self.ngram_similarity_vec(cand_ngrams, windowr)
-                            if mean_match > 0.0:
-                                kf_matches.append((float(mean_match), idx))
-                                logger.info(f"MATCH: {cand_kf}")
+                            total_score += mean_match
 
-                logger.info(f"{kf_matches}")
-                results.append(self._set_results(votes_matrix[:, 0], cand_kf, mean_match, str(text), q, idx, len(q) + idx))
+                    final_score = total_score / len(list(range(self.ngrams_range[0], self.ngrams_range[1] + 1)))
+                    if final_score > self.threshold:
+                        _, key_field = self.get_key_field(cand_kf, 0)
+                        kf_matches = {
+                            "key_field": key_field[0],
+                            "key_word": cand_kf,
+                            "similarity": final_score,
+                            "text": text,
+                            "norm_ocr_text": q,
+                        }
+
+                results.append(kf_matches)
+                    #logger.info(f"{results}")
 
                     # weights = np.ones(size_ngram, dtype=np.int64)
                     # weights[0] = self.primes[0]
@@ -352,7 +357,7 @@ class WordFinder:
                                 queue.append(tail_fragment)
             if single:
                 if results:
-                    logger.debug(f"RESULTS: {results}")
+                    logger.info(f"RESULTS: {results}")
                 return results if results else []
             return results
         except Exception as e:
@@ -659,12 +664,10 @@ class WordFinder:
         return 1.0 if la == lb else float(min(la, lb) / max(la, lb))
 
     def length_penalty_vect(self, matrix: np.ndarray[Any, np.dtype[np.uint8]], word_len: int):
-        min_val = np.minimum(word_len, matrix[:, 2])
-        max_val = np.maximum(word_len, matrix[:, 2])
-        penalty = np.divide(min_val, max_val, dtype=np.float32)
+        penalty = np.divide(np.minimum(word_len, matrix[:, 2]), np.maximum(word_len, matrix[:, 2]), dtype=np.float32)
         new_sim = np.multiply(penalty, matrix[:, -1], dtype=np.float32)
-        return np.column_stack([matrix[:, [0, 1]], penalty, new_sim])
-        #return np.sort(penalized_matrix, 0)[::-1]
+        penalized_matrix =  np.column_stack([matrix[:, [0, 1]], penalty, new_sim])
+        return np.sort(penalized_matrix, 0)[::-1]
         
     def decode_array(self, keys: np.ndarray[Any, np.dtype[np.uint32]]) -> np.ndarray[Any, np.dtype[np.uint8]]:
         decoded_kf = keys // self.primes[0]
