@@ -127,9 +127,7 @@ class TrainModel:
             global_matrices[n] = np.ascontiguousarray(unique_array, np.uint8)
             logger.info(f"Tamaño de la global matriz: {unique_array.shape}")
             
-            # logger.info("Matriz:\n"f"{global_matrices[n]}")
-        
-        # logger.info(f"{mapped_matrix}")
+        logger.info("Matriz:\n"f"{mapped_matrix}")
         return global_vocab, global_matrices, mapped_matrix, hash_index, inver_index
 
     def _train_noise_filter(self, noise_words: List[str]) -> Dict[str, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]:
