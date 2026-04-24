@@ -233,7 +233,7 @@ def run_queries2(base_queries2: List[str], wf: WordFinder, show_no_match: bool =
     logger.info(f"QUERIES: Tiempo total: {time.perf_counter()-time0:.4f}s")
     
 def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
-    logger.info(f"\nBuscando archivos JSON individuales en la carpeta {DATA_FOLDER2}...")
+    # logger.info(f"\nBuscando archivos JSON individuales en la carpeta {DATA_FOLDER2}...")
     json_files = glob.glob(os.path.join(DATA_FOLDER2, '*.json'))
 
     if not json_files:
@@ -246,7 +246,7 @@ def test_json_poligons(wf: WordFinder, DATA_FOLDER2: str):
     time0 = time.perf_counter()
     for file_path in json_files:
         file_name = os.path.basename(file_path)
-        # logger.info(f"\n--- Procesando archivo: {file_name} ---")
+        logger.debug(f"\n--- Procesando archivo: {file_name} ---")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             polygons: Dict[str, Dict[str, Any]] = json.load(f)

@@ -3,7 +3,7 @@ import numpy as np
 # import time
 import logging
 import unicodedata
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Set
 from collections import Counter
 
 logger = logging.getLogger(__name__)
@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 class TrainModel:
     def __init__(self, config: Dict[str, Any], project_root: str):
         self.project_root = project_root
-        self.ngrams: Tuple[int, int] = config["char_ngrams"]
-        self.min_ngram_size = self.ngrams[0]
-        self.max_ngram_size = (self.min_ngram_size + 1) if self.ngrams[1] == self.min_ngram_size else self.ngrams[1]
+        ngrams_range: Tuple[int, int] = config["char_ngrams"]
+        self.min_ngram_size = ngrams_range[0]
+        self.max_ngram_size = (self.min_ngram_size + 1) if ngrams_range[1] == self.min_ngram_size else ngrams_range[1]
         self.top_ngrams_fraction: int = config.get("top_ngrams_fraction", {})
         self.prime = config["primes"]
         
@@ -30,14 +30,9 @@ class TrainModel:
             for id, (word, words_list) in enumerate(words.items(), 1):
                 norm_word = self._normalize(word)
                 index = (field_id, id)
-                # array_index = np.array(index)
                 for_matrixes: List[List[int]] = []
                 for_matrixes.append(list(index))
                 for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-                    # if n == 2:
-                    #     temp_word = norm_word.replace(" ", "")
-                    # else:
-                    #     temp_word = norm_word
                     n_gramas = self._ngrams(norm_word, n)
                     for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
                     words_list.extend(n_gramas)
@@ -46,11 +41,13 @@ class TrainModel:
                 global_vocab[index] = {norm_word: words_list}
             
         all_words = [list(w.keys())[0] for w in global_vocab.values()]
-        counts = Counter(all_ngrams)
-        gngrams = list(counts.keys())
-        unique_count = len([k for k, v in counts.items() if v == 1])
-        total_count = sum(counts.values())
-        logger.info(f"COUNTS:\nÚnicos: {unique_count} / Total: {total_count}")
+        counts = Counter(all_ngrams)    # Conteo de N gramas
+        gngrams: Set[str] = set(all_ngrams)       # Ejemplar de cada ngrama presente
+        short_key = [w for w in all_words if self.max_ngram_size >= len(w)]
+        
+        unique_count = len([k for k, v in counts.items() if v == 1])    # Cantidad de n gramas con frecuencia mayor a 1
+        total_count = len(all_ngrams)                                   # Cantidad total de ngramas
+        max_rows_n = int((total_count - unique_count) / self.top_ngrams_fraction)
            
         mapped_matrix: Dict[int, Any] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         hash_i: Dict[int, List[int]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
@@ -71,40 +68,46 @@ class TrainModel:
             if mapped_matrix[n]:
                 mapped_matrix[n] = np.array(mapped_matrix[n], dtype=np.uint8)
             else:
-                mapped_matrix[n] = np.zeros((0, n), dtype=np.uint8)
-            # logger.info(f"{mapped_matrix.get(n).shape}")
-        # 1. Calcular tamaño máximo usando TODOS los ngramas de TODAS las longitudes
-        min_n = self.min_ngram_size
-        total_ngrams_all_sizes = total_count - unique_count # Todos los ngramas sin filtrar
-        filas_max_n = int(total_ngrams_all_sizes / self.top_ngrams_fraction)
-                
-        global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+                continue
+        # logger.info(f"{mapped_matrix}")
+        
+        inver_index: Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]] = {}
+        unique_list = [[ord(char) for char in ng] for ng in gngrams]    # [[1, 2], [4, 3]]
+        
+        for unique in unique_list:                                      # [1, 2] -> [4, 3]
+            tuple_grma = tuple(unique)
+            for n, grams in map_ngrams.items():
+                # idx = grams[0]
+                idx = (grams[0][0] * self.prime[0]) + grams[0][1]       # [1743]
+                for gram in grams:                                      # [1, 2] -> [4, 3]
+                    list_idx: List[int] = []
+                    if gram != unique:                                  # [1, 2] == [1, 2]
+                        continue
+                    else:
+                        list_idx.append(idx)
+                        
+                    inver_index[tuple_grma] = np.array(list_idx, np.uint32)
+                    
+        # logger.info(f"{inver_index}")
+        min_grams_dict = {}
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-            # Base: ngramas NO únicos (freq > 1) del tamaño n, limitados a filas_n
-            ngrams_ranked = sorted(((ng, freq) for ng, freq in counts.items() if len(ng) == n and freq > 1), key=lambda x: x[1], reverse=True)
-            ngrams_of_size = [ng for ng, _ in ngrams_ranked]
-            filas_n = int(filas_max_n * min_n / n)
-            base_ngrams = ngrams_of_size[:filas_n]
-
-            # Extras: keywords de longitud exacta n que no estén ya en la base
-            short_keywords = sorted([w for w in all_words if len(w)==n])
-            base_set = set(base_ngrams)
-
-            extras = [w for w in short_keywords if w not in base_set]
-
-            base_matrix = self._generate_matrix(n, base_ngrams)
-
-            if extras:
-                extras_matrix = self._generate_matrix(n, extras)
-                global_matrices[n] = np.vstack([base_matrix, extras_matrix], dtype=np.uint8)
-                # logger.info(f"Inyectando keywords cortas en matriz n={n}: {extras}")
-            else:
-                global_matrices[n] = base_matrix
-
-        for matrix in global_matrices.values():
-            logger.info(f"Tamaño de la matriz: {matrix.shape}")
-
-        # logger.info("Matriz:\n"f"{global_matrices.get(2).shape}, }")
+            list_n = []
+            for w in short_key:                    
+                list_n.extend([[ord(char) for char in ng] for ng in self._ngrams(w, n)])
+            min_gramas = np.array(list_n)
+            min_grams_dict[n] = min_gramas
+        
+        global_matrices: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
+        for n, ngrmas in mapped_matrix.items():
+            min_grams = min_grams_dict[n]
+            ngrmas = np.concatenate([ngrmas, min_grams])
+            unique_array, unique_counts = np.unique(ngrmas, return_counts=True, axis=0)
+            unique_id = np.where(unique_counts > 1)[0]
+            unique_array = unique_array[unique_id]
+            global_matrices[n] = unique_array
+            logger.info(f"Tamaño de la global matriz: {unique_array.shape}")
+            
+            # logger.info("Matriz:\n"f"{global_matrices[n]}")
         return global_vocab, global_matrices, mapped_matrix, hash_index
 
     def _train_noise_filter(self, noise_words: List[str]) -> Dict[int, Dict[str, str | Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]]:
@@ -145,13 +148,3 @@ class TrainModel:
             return []
         # Solo acepta ngramas que NO inician ni terminan con espacio
         return [s[i:i+n] for i in range(len(s) - n + 1)]
-
-    def _generate_matrix(self, size: int, ngrams: List[str]) -> np.ndarray[Any, np.dtype[np.uint8]]:
-        """Genera una matriz (len(ngrams) x size) usando uint8, sin padding."""
-        if not ngrams:
-            return np.zeros((0, size), dtype=np.uint8)
-
-        matrix = np.empty((len(ngrams), size), dtype=np.uint8)
-        for i, ng in enumerate(ngrams):
-            matrix[i] = [ord(char) for char in ng]
-        return matrix

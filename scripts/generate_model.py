@@ -12,13 +12,11 @@ logger = logging.getLogger(__name__)
 
 class ModelGenerator:
     def __init__(self, config_file: str, project_root: str, key_words_file: str):
-        time0 = time.perf_counter()
         self.project_root = project_root
         self.config_file = config_file
         self.key_words_file = key_words_file
         self.config_dict = self._load_params(config_file=self.config_file)
         self.key_words_dict = self._load_keywords(self.key_words_file)
-        logger.info(f"Iniciación en: {time.perf_counter() - time0}s")
         self.generate_model()
 
     def _load_params(self, config_file: str) -> Dict[str, Any]:
