@@ -6,7 +6,7 @@ params:
   forb_match: 0.80
   window_flexibility: 3
   min_diff: 0.000009
-  primes: [1741, 1543]
+  primes: [301703, 1741]
 
 # field_conversion_map:
 #   noise_words: 0

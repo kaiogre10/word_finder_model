@@ -3,8 +3,8 @@ import numpy as np
 # import time
 import logging
 import unicodedata
-from typing import List, Dict, Any, Tuple, Set
 from collections import Counter
+from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -23,31 +23,44 @@ class TrainModel:
         return global_filter, noise_filter
     
     def _train_global(self, key_words: Dict[str, Dict[str, List[str]]]):
+        """Entrena las estructuras globales de n-gramas para palabras clave.
+        Args:
+            key_words: Diccionario de campos con palabras clave y su información.
+        Returns:
+            Tuple con 4 elementos, en este orden:
+                1) global_vocab: Lista de tuplas (palabra_normalizada, (field_id, id)).
+                2) global_matrices: Diccionario por n con matriz final (np.uint8) de
+                   n-gramas filtrados por frecuencia.
+                3) mapped_matrix: Diccionario por n con matriz base (np.uint8) antes
+                   del filtrado final de frecuencia.
+                4) hash_index: Diccionario por n con índices hash (np.uint32) que
+                   identifican el origen de cada entrada.
+                5) inver_index ees un índice inverso donde cada clave es un n-grama 
+                   (como tupla de enteros) y el valor son índices hash asociados de cualquier palabra.
+        """
         all_ngrams: List[str] = []
         map_ngrams: Dict[str, List[List[int]]] = {}
-        global_vocab: Dict[Tuple[int, int], Dict[str, List[str]]] = {}
+        global_vocab: Dict[Tuple[int, int], str] = {}
         for field_id, (_, words) in enumerate(key_words.items(), 1):
-            for id, (word, words_list) in enumerate(words.items(), 1):
+            for id, (word, _) in enumerate(words.items(), 1):
                 norm_word = self._normalize(word)
                 index = (field_id, id)
+                global_vocab[index] = norm_word
                 for_matrixes: List[List[int]] = []
                 for_matrixes.append(list(index))
                 for n in range(self.min_ngram_size, self.max_ngram_size + 1):
                     n_gramas = self._ngrams(norm_word, n)
                     for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
-                    words_list.extend(n_gramas)
                     all_ngrams.extend(n_gramas)
                     map_ngrams[norm_word] = for_matrixes
-                global_vocab[index] = {norm_word: words_list}
-            
-        all_words = [list(w.keys())[0] for w in global_vocab.values()]
-        counts = Counter(all_ngrams)    # Conteo de N gramas
-        gngrams: Set[str] = set(all_ngrams)       # Ejemplar de cada ngrama presente
-        short_key = [w for w in all_words if self.max_ngram_size >= len(w)]
         
-        unique_count = len([k for k, v in counts.items() if v == 1])    # Cantidad de n gramas con frecuencia mayor a 1
-        total_count = len(all_ngrams)                                   # Cantidad total de ngramas
-        max_rows_n = int((total_count - unique_count) / self.top_ngrams_fraction)
+        
+        all_words = [w for w in global_vocab.values()]
+        counts = Counter(all_ngrams)
+        gngrams: List[str] = sorted(counts)        # Ejemplar de cada ngrama presente
+        # logger.info(f"{global_vocab}")
+        # total_count = len(all_ngrams)                        # Cantidad total de ngramas
+        # max_rows_n = int((total_count - unique_count) / self.top_ngrams_fraction)
            
         mapped_matrix: Dict[int, Any] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
         hash_i: Dict[int, List[int]] = {n: [] for n in range(self.min_ngram_size, self.max_ngram_size + 1)}
@@ -66,30 +79,37 @@ class TrainModel:
         
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             if mapped_matrix[n]:
-                mapped_matrix[n] = np.array(mapped_matrix[n], dtype=np.uint8)
+                mapped_matrix[n] = np.ascontiguousarray(mapped_matrix[n], dtype=np.uint8)
             else:
                 continue
         # logger.info(f"{mapped_matrix}")
         
-        inver_index: Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]] = {}
-        unique_list = [[ord(char) for char in ng] for ng in gngrams]    # [[1, 2], [4, 3]]
+        unique_list = [[ord(char) for char in ng] for ng in gngrams]
+        inver_index: Dict[int, Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]]] = {}  # Lista de índices Hash de cada ngrama
+
+        for n in range(self.min_ngram_size, self.max_ngram_size + 1):
+            inver: Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]] = {}
+
+            for unique in unique_list:
+                if len(unique) != n:
+                    continue
+                tuple_grma = tuple(unique)
+                inver[tuple_grma] = []
+                for _, grams in map_ngrams.items():
+                    idx = int((grams[0][0] * self.prime[0]) + grams[0][1])
+                    for gram in grams[1:]:
+                        if len(gram) == n and gram == unique:
+                            inver[tuple_grma].append(idx)
+            inver_index[n] = inver
         
-        for unique in unique_list:                                      # [1, 2] -> [4, 3]
-            tuple_grma = tuple(unique)
-            for n, grams in map_ngrams.items():
-                # idx = grams[0]
-                idx = (grams[0][0] * self.prime[0]) + grams[0][1]       # [1743]
-                for gram in grams:                                      # [1, 2] -> [4, 3]
-                    list_idx: List[int] = []
-                    if gram != unique:                                  # [1, 2] == [1, 2]
-                        continue
-                    else:
-                        list_idx.append(idx)
-                        
-                    inver_index[tuple_grma] = np.array(list_idx, np.uint32)
-                    
+        for n, inver in inver_index.items():
+            for tuple_grma, values in inver.items():
+                inver[tuple_grma] = np.array(values, dtype=np.uint32)
+                
         # logger.info(f"{inver_index}")
-        min_grams_dict = {}
+        short_key = [w for w in all_words if self.max_ngram_size >= len(w)]
+        
+        min_grams_dict: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             list_n = []
             for w in short_key:                    
@@ -104,18 +124,20 @@ class TrainModel:
             unique_array, unique_counts = np.unique(ngrmas, return_counts=True, axis=0)
             unique_id = np.where(unique_counts > 1)[0]
             unique_array = unique_array[unique_id]
-            global_matrices[n] = unique_array
+            global_matrices[n] = np.ascontiguousarray(unique_array, np.uint8)
             logger.info(f"Tamaño de la global matriz: {unique_array.shape}")
             
             # logger.info("Matriz:\n"f"{global_matrices[n]}")
-        return global_vocab, global_matrices, mapped_matrix, hash_index
+        
+        # logger.info(f"{mapped_matrix}")
+        return global_vocab, global_matrices, mapped_matrix, hash_index, inver_index
 
-    def _train_noise_filter(self, noise_words: List[str]) -> Dict[int, Dict[str, str | Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]]:
+    def _train_noise_filter(self, noise_words: List[str]) -> Dict[str, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]:
         # timen = time.perf_counter()
         noise_words_sorted = sorted(noise_words, key=len, reverse=True)
         noise_filter: Dict[str, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]] = {}
 
-        for i, noise_word in enumerate(noise_words_sorted):
+        for noise_word in noise_words_sorted:
 
             word_grams_dict: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
             for n in range(self.min_ngram_size, self.max_ngram_size + 1):
