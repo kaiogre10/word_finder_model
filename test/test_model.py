@@ -84,7 +84,7 @@ base_queries2: List[str] = [
     "code", "puntuacion", "puntualidad", "estudiante", "italiano", "punt",
     "puntillas", "pun", "puesto", "amarillo", "punct", "punto", "ano", "titulo"
 ]
-text_test = ["precio pun"]
+text_test = ["precio pun", "subtotal", "total"]
 # Perturbaciones
 def delete_char(s: str) -> str:
     if len(s) <= 2: return s
@@ -385,10 +385,10 @@ if __name__ == "__main__":
     # except Exception as e:
     #     logger.error(f"Error testeando: {e}", exc_info=True)
 
-    try:
-        test_json_poligons(wf, DATA_FOLDER2)
-    except Exception as e:
-        logger.error(f"Error testeando: {e}", exc_info=True)
+    # try:
+    #     test_json_poligons(wf, DATA_FOLDER2)
+    # except Exception as e:
+    #     logger.error(f"Error testeando: {e}", exc_info=True)
 
     # logger.info("=====TEST DE QUERIES SIN ESPACIAR INCIADO=====")
     # run_queries(base_queries, wf)
