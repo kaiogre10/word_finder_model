@@ -1,10 +1,8 @@
-import re
 import numpy as np
-# import time
 import logging
-import unicodedata
 from collections import Counter
 from typing import List, Dict, Any, Tuple
+from utils.utils import get_ngrams, normalize
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +41,13 @@ class TrainModel:
         global_vocab: Dict[Tuple[int, int], str] = {}
         for field_id, (_, words) in enumerate(key_words.items(), 1):
             for id, (word, _) in enumerate(words.items(), 1):
-                norm_word = self._normalize(word)
+                norm_word: str = normalize(word)
                 index = (field_id, id)
                 global_vocab[index] = norm_word
                 for_matrixes: List[List[int]] = []
                 for_matrixes.append(list(index))
-                for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-                    n_gramas = self._ngrams(norm_word, n)
+                for n in range(self.min_ngram_size, (self.max_ngram_size + 1)):
+                    n_gramas = get_ngrams(norm_word, n)
                     for_matrixes.extend([[ord(char) for char in ng] for ng in n_gramas])
                     all_ngrams.extend(n_gramas)
                     map_ngrams[norm_word] = for_matrixes
@@ -85,7 +83,7 @@ class TrainModel:
         # logger.info(f"{mapped_matrix}")
         
         unique_list = [[ord(char) for char in ng] for ng in gngrams]
-        inver_index: Dict[int, Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]]] = {}  # Lista de índices Hash de cada ngrama
+        inver_index: Dict[int, Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]]] = {} # Lista de índices Hash de cada ngrama
 
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             inver: Dict[Tuple, np.ndarray[Any, np.dtype[np.uint32]]] = {}
@@ -113,7 +111,7 @@ class TrainModel:
         for n in range(self.min_ngram_size, self.max_ngram_size + 1):
             list_n = []
             for w in short_key:                    
-                list_n.extend([[ord(char) for char in ng] for ng in self._ngrams(w, n)])
+                list_n.extend([[ord(char) for char in ng] for ng in get_ngrams(w, n)])
             min_gramas = np.array(list_n)
             min_grams_dict[n] = min_gramas
         
@@ -125,9 +123,9 @@ class TrainModel:
             unique_id = np.where(unique_counts > 1)[0]
             unique_array = unique_array[unique_id]
             global_matrices[n] = np.ascontiguousarray(unique_array, np.uint8)
-            logger.info(f"Tamaño de la global matriz: {unique_array.shape}")
+            # logger.info(f"Tamaño de la global matriz: {unique_array.shape}")
             
-        logger.info("Matriz:\n"f"{mapped_matrix}")
+        # logger.info("Matriz:\n"f"{mapped_matrix}")
         return global_vocab, global_matrices, mapped_matrix, hash_index, inver_index
 
     def _train_noise_filter(self, noise_words: List[str]) -> Dict[str, Dict[int, np.ndarray[Any, np.dtype[np.uint8]]]]:
@@ -139,32 +137,10 @@ class TrainModel:
 
             word_grams_dict: Dict[int, np.ndarray[Any, np.dtype[np.uint8]]] = {}
             for n in range(self.min_ngram_size, self.max_ngram_size + 1):
-                int_grams = np.array([[ord(char) for char in ng] for ng in self._ngrams(noise_word, n)])
+                int_grams = np.array([[ord(char) for char in ng] for ng in get_ngrams(noise_word, n)])
                 if int_grams.size > 0:
                     word_grams_dict[n] = int_grams
             noise_filter[noise_word] = word_grams_dict
         # logger.info(f"{noise_filter}")
         # logger.info(f"NOISE FLTER ACABADO EN {time.perf_counter()- timen:.6f}'s")
         return noise_filter
-
-    def _normalize(self, s: str) -> str:
-        try:
-            if not s:
-                return ""
-            s = s.lower()
-            s = "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
-            s = re.sub(r"(?<=[a-zA-Z])[^\w\s]+(?=[a-zA-Z])", "", s)
-            s = re.sub(r"[^a-z\s]+", " ", s)
-            q = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
-            return re.sub(r"\s+", " ", q).strip()
-        except UnicodeError as e:
-            logger.warning(f"ERROR codificando: {e}", exc_info=True)
-        return ""
-
-    def _ngrams(self, s: str, n: int) -> List[str]:
-        if n <= 0 or not s:
-            return []
-        if len(s) < n:
-            return []
-        # Solo acepta ngramas que NO inician ni terminan con espacio
-        return [s[i:i+n] for i in range(len(s) - n + 1)]

@@ -1,7 +1,7 @@
 import os
 import sys
 import logging
-from scripts.generate_model import ModelGenerator
+from src.generate_model import ModelGenerator
 from cache_service import  cleanup_project_cache
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -45,8 +45,8 @@ logger_root.addHandler(console_handler)
     
 if __name__ == "__main__":
     
-    CONFIG_FILE = os.path.join(PROJECT_ROOT, "data", "config.yaml")
-    KEY_WORDS = os.path.join(PROJECT_ROOT, "data", "key_words.json")
+    CONFIG_FILE = os.path.join(PROJECT_ROOT, "config", "config.yaml")
+    KEY_WORDS = os.path.join(PROJECT_ROOT, "config", "key_words.json")
     cleanup_project_cache(PROJECT_ROOT)
     try:
         config_file = CONFIG_FILE

@@ -4,9 +4,9 @@ import pickle
 import json
 import yaml
 import time
-from datetime import datetime
 from typing import List, Dict, Any, Optional
 from src.train_model import TrainModel
+from src.precomputing import PrecomputedMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +50,13 @@ class ModelGenerator:
         key_words: Dict[str, Dict[str, List[str]]] = self.key_words_dict.get("key_words", {})
         noise_words: List[str] = self.key_words_dict["noise_words"]
         params: Dict[str, Any] = self.config_dict.get("params", {})
+        output_path = params["output_path"]
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(key_words, noise_words)
-        
-        now = datetime.now()
-        model_time = now.isoformat()
+
+        self._matrix = PrecomputedMatrix(params, self.project_root)
+        self._matrix.precompute_similarites()
                             
         model: Dict[str, Any] = {
             "params": params,
@@ -63,16 +64,16 @@ class ModelGenerator:
             "global_filter": global_filter
         }
 
-        logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
+        # logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
 
-        output_path = os.path.join(self.project_root, "models", "wf_model.pkl")
+        output_path = os.path.join(self.project_root, *output_path, "wf_model.pkl")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         try:
             with open(output_path, "wb") as f:
                 pickle.dump(model, f)
                 
-            logger.critical(f"Modelo 'WORD_FINDER' generado el {model_time} guardado en: %s", output_path)
+            # logger.critical(f"Modelo 'WORD_FINDER' generado el {model_time} guardado en: %s", output_path)
             return model
             
         except AttributeError as e:

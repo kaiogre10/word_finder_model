@@ -10,7 +10,8 @@ logs/
 *idea
 input2/
 input/
-models/
+utils/
 *.pkl
 *.txt
-*.json
+#*.json
+*.npz
