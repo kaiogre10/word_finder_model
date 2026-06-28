@@ -7,6 +7,9 @@ import unicodedata
 # import time
 from functools import cached_property
 from typing import List, Any, Dict, Tuple, Set, FrozenSet
+from utils.config_factory import MotorMatricesControl
+import scipy.sparse as sp
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,9 @@ class WordFinder:
         params: Dict[str, Any] = model.get("params", {})
         self.noise_filter = model["noise_filter"]
         self.global_filter = model.get("global_filter", {})
+        self.project_root = model.get("project_root", "")
         # Parametros de configuración
+        self.motor = MotorMatricesControl(self.project_root, params)        
         self.threshold: float = params.get("threshold_similarity", {})
         self.global_filter_threshold: float = params.get("global_filter_threshold", {})
         self.ngrams_range: Tuple[int, int] = params["char_ngrams"]
@@ -33,6 +38,7 @@ class WordFinder:
         self.min_diff: float = params.get("min_diff", {})
         self.primes: Tuple[int, int] = params["primes"]
         self.total_lens = len(list(range(params["char_ngrams"][0], params["char_ngrams"][1] + 1)))
+        # self.test_matrix()
         
     def _load_model(self, model_path: str) -> Dict[str, Any]:
         try:
@@ -82,7 +88,17 @@ class WordFinder:
     @cached_property
     def noise_words(self) -> FrozenSet[str]:
         return frozenset([w for w in self.noise_filter.keys()])
-    
+
+    # def test_matrix(self):
+    #     for n in range(self.ngrams_range[0], (self.ngrams_range[1] + 1)):
+    #         for regis in self.motor.registro_matrices:
+    #             if (n+1) == regis:
+    #                 mapp_matrix = self.motor.registro_matrices[n+1]
+    #                 matriz_csr = sp.csr_matrix((mapp_matrix.data, mapp_matrix.indices, mapp_matrix.indptr), shape=tuple(mapp_matrix.shape))
+    #                 blokdf = pd.DataFrame(matriz_csr[0:100, 0:100].toarray())
+    #                 path = os.path.join(self.project_root, "sparce_inspect.csv")
+    #                 blokdf.to_csv(path, index=False, header=False)
+
     def find_keywords(self, text: List[str] | str) -> List[Dict[str, Any]]:
         try:
             if not text:
@@ -99,16 +115,13 @@ class WordFinder:
             else:
                 queue = [self.text_normalize(s) for s in text if self.text_normalize(s)]
 
-            if s in self.global_words:
-                key_word, key_field = self.get_key_field(s, 0)
-                logger.info(f"Match incial: '{key_word}' {key_field[0]}")
-                return [self._set_results(key_field[0], key_word, 1.0, str(text), key_word, 0, len(queue))]
 
             results: List[Dict[str, Any]] = []
             while queue:
                 q = queue.pop(0)
                 if not q:
                     continue
+
                 if q in self.noise_words:
                     # logger.info(f"Ruido temprano 2: '{list(self.noise_words).pop(list(self.noise_words).index(q))}'")
                     continue
@@ -168,14 +181,14 @@ class WordFinder:
                 votes_matrix = np.column_stack([unique_keys, sums])
 
                 kf_arr = self.get_key_field_arr(votes_matrix[:, [0, 1]])
-                logger.info(f"POSIBLES MATCHES PARA: '{q}':\n"f"{kf_arr}")
+                # logger.info(f"POSIBLES MATCHES PARA: '{q}':\n"f"{kf_arr}")
                 valid_kw = np.array([len(k[1]) for k in kf_arr], np.uint8)
                 votes_matrix = np.column_stack([votes_matrix[:, [0, 1]], valid_kw, votes_matrix[:, -1]])
                 votes_matrix = votes_matrix[np.argsort(votes_matrix[:, -1])[::-1]]
-                logger.info(f"AÑADIDO LEN(Q) COLUMNA 2:\n"f"{votes_matrix}")
+                # logger.info(f"AÑADIDO LEN(Q) COLUMNA 2:\n"f"{votes_matrix}")
                 votes_matrix = self.length_penalty_vect(votes_matrix, q_len)
-                logger.info("Penalizada:\n"f"{np.array2string(votes_matrix, precision=4)}")
-                logger.info(f"QUERY: '{q}'")
+                # logger.info("Penalizada:\n"f"{np.array2string(votes_matrix, precision=4)}")
+                # logger.info(f"QUERY: '{q}'")
                 for row in votes_matrix:
                     key_field = int(row[0])
                     key_word = int(row[1])
@@ -185,7 +198,7 @@ class WordFinder:
                     if not cand_kf:
                         continue
 
-                    logger.info(f"CANDIDATO: '{cand_kf}'")
+                    # logger.info(f"CANDIDATO: '{cand_kf}'")
                     gram_cands = self.get_key_word_ngrams(cand_kf)
                     total_score = 0.0
                     list_test: List[List[Any]] = []
@@ -213,7 +226,7 @@ class WordFinder:
                             list_test.append([best_n_score, best_n_idx, cand_kf, i])
 
                     if list_test:
-                        logger.info(f"{list_test}")
+                        # logger.info(f"{list_test}")
                         soft_similarity = total_score / self.total_lens
                         final_score = soft_similarity * exact_score
                         logger.debug(
@@ -265,7 +278,7 @@ class WordFinder:
                                 queue.append(tail_fragment)
             if single:
                 if results:
-                    logger.info(f"RESULTS: {results}")
+                    logger.debug(f"RESULTS: {results}")
                 return results if results else []
             return results
         except Exception as e:
@@ -345,17 +358,18 @@ class WordFinder:
             max_ngram_range = self.ngrams_range[1]
         
         for n in range(self.ngrams_range[0], max_ngram_range + 1):
-            ngrams = [[ord(char) for char in ng] for ng in self._n_grams(q, n)]
-            gq[n] = np.array(ngrams)
+            ngrams = self._n_grams(q, n)
+            gq[n] = np.asarray(ngrams, dtype=f'S{n}').view(np.uint8).reshape(len(ngrams), n)
         return gq
     
-    def _n_grams(self, q: str, n: int) -> List[str]:
+    def _n_grams(self, q: str, n: int) -> List[bytes]:
+        p: bytes = q.encode("utf8")
         try:
-            if n <= 0 or not q:
+            if n <= 0 or not p:
                 return []
-            if len(q) < n:
+            if len(p) < n:
                 return []
-            return [q[i:i+n] for i in range(len(q) - n + 1)]
+            return [p[i:i+n] for i in range(len(p) - n + 1)]
         except Exception as e:
             logger.error(f"Error construyendo n-gramas: {e}", exc_info=True)
             return []

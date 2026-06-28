@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 from src.generate_model import ModelGenerator
-from cache_service import  cleanup_project_cache
+from cache_service import cleanup_project_cache, clear_output_folders
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     
     CONFIG_FILE = os.path.join(PROJECT_ROOT, "config", "config.yaml")
     KEY_WORDS = os.path.join(PROJECT_ROOT, "config", "key_words.json")
-    cleanup_project_cache(PROJECT_ROOT)
+    clear_output_folders(["models"], PROJECT_ROOT)
     try:
         config_file = CONFIG_FILE
         key_words_file = KEY_WORDS

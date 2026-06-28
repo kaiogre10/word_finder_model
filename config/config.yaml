@@ -8,8 +8,16 @@ params:
   min_diff: 0.000009
   primes: [301703, 1741]
   matrix_size: 1000
-  output_path: ['models']
-  ngrams_name: '_grams'
+
+  data_path: ['models', 'matrixes']
+  matrix_path: "matrixes"
+  ngrams_path: ["ngrams"]
+  ngrams_name: '_ngrams'
+  data: "data.npy"
+  indices: "indices.npy"
+  indptr: "indptr.npy"
+  mtx_shape: "mtx_shape.npy"
+  # spc_mtx
 
 # field_conversion_map:
 #   noise_words: 0

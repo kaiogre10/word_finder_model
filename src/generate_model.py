@@ -50,7 +50,7 @@ class ModelGenerator:
         key_words: Dict[str, Dict[str, List[str]]] = self.key_words_dict.get("key_words", {})
         noise_words: List[str] = self.key_words_dict["noise_words"]
         params: Dict[str, Any] = self.config_dict.get("params", {})
-        output_path = params["output_path"]
+        output_path = params["data_path"]
         self._train = TrainModel(config=params, project_root=self.project_root)
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(key_words, noise_words)
@@ -61,12 +61,13 @@ class ModelGenerator:
         model: Dict[str, Any] = {
             "params": params,
             "noise_filter": noise_filter,
-            "global_filter": global_filter
+            "global_filter": global_filter,
+            "project_root": self.project_root
         }
 
         # logger.info(f"Modelo generado en: {time.perf_counter()-time1}s")
 
-        output_path = os.path.join(self.project_root, *output_path, "wf_model.pkl")
+        output_path = os.path.join(self.project_root, output_path[0], "wf_model.pkl")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         try:

@@ -56,7 +56,6 @@ class TrainModel:
         counts = Counter(all_ngrams)
         gngrams: List[str] = sorted(counts)        # Ejemplar de cada ngrama presente
         most = counts.most_common(1)[0][1]
-        logger.info(f"{most}")
         # total_count = len(all_ngrams)                        # Cantidad total de ngramas
         # max_rows_n = int((total_count - unique_count) / self.top_ngrams_fraction)
            

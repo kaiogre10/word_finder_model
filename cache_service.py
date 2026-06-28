@@ -22,7 +22,7 @@ def clear_output_folders(output_paths: List[str], project_root: str) -> None:
             try:
                 if os.path.isdir(item_path):
                     # Contar archivos y carpetas dentro antes de eliminar
-                    for root, dirs, files in os.walk(item_path):
+                    for _, dirs, files in os.walk(item_path):
                         carpetas_eliminadas += len(dirs)
                         archivos_eliminados += len(files)
                     shutil.rmtree(item_path)
@@ -30,14 +30,14 @@ def clear_output_folders(output_paths: List[str], project_root: str) -> None:
                 else:
                     os.remove(item_path)
                     archivos_eliminados += 1
-                logger.debug(f"Eliminado: {item_path}")
+                logger.info(f"Eliminado: {item_path}")
             except Exception as e:
                 logger.error(f"Error al eliminar {item_path}: {e}")
     tempo = time.perf_counter() - t0
     total_eliminados = archivos_eliminados + carpetas_eliminadas
     if archivos_eliminados < 0:
         avg_time_file = tempo / archivos_eliminados
-        logging.debug(f"Total: {total_eliminados}, promedio por archivo {avg_time_file:.6f} archivos/s")
+        logging.info(f"Total: {total_eliminados}, promedio por archivo {avg_time_file:.6f} archivos/s")
     else:
         pass
 
