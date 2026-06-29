@@ -55,7 +55,7 @@ class ModelGenerator:
                 
         global_filter, noise_filter = self._train.train_all_vectorizers(key_words, noise_words)
 
-        self._matrix = PrecomputedMatrix(params, self.project_root)
+        self._matrix = PrecomputedMatrix(params, self.project_root, self.key_words_dict)
         self._matrix.precompute_similarites()
                             
         model: Dict[str, Any] = {

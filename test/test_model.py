@@ -56,7 +56,7 @@ from src.word_finder import WordFinder
 MODELS_PATH = os.path.join(PROJECT_ROOT, "models")
 MODEL_STD = os.path.join(MODELS_PATH, "wf_model.pkl")
 # MATRIXES_PATH = os.path.join(MODELS_PATH, *["matrixes", ".npz"])
-# NGRAMS_PATH = os.path.join(MODELS_PATH, *["ngrams", "all_ngrams.npz"])
+NGRAMS_PATH = os.path.join(MODELS_PATH, *["ngrams", "all_ngrams.npz"])
 
 DATA_FOLDER = os.path.join(PROJECT_ROOT, "input")
 DATA_FOLDER2 = os.path.join(PROJECT_ROOT, "input2")
@@ -380,10 +380,10 @@ def basic_test(text_test: List[str]):
         logger.info(f"Results: {results}")
     logger.info(f"Tiempo básico: {time.perf_counter() - timebas:.6f}'s")
 
-# def test_np_files():
-#     load_ngrams = np.load(NGRAMS_PATH)
-#     for ngram in load_ngrams.values():
-#         logger.debug(f"NGRAM: {ngram}")
+def test_np_files():
+    load_ngrams = np.load(NGRAMS_PATH)
+    for ngram in load_ngrams.values():
+        logger.info(f"NGRAM: {ngram}")
 
 #     load_matrix = MotorMatricesControl(MATRIXES_PATH)
     
@@ -397,7 +397,7 @@ if __name__ == "__main__":
     #     # logger.info(f"TIEMPO TEST LINEAS: {time.perf_counter()-time1:.6f}")
     # except Exception as e:
     #     logger.error(f"Error testeando: {e}", exc_info=True)
-    # test_np_files()
+    test_np_files()
     # try:
     #     test_json_poligons(wf, DATA_FOLDER2)
     # except Exception as e:
@@ -415,8 +415,8 @@ if __name__ == "__main__":
     #     logger.info(f"TIEMPO DE  NORMALIZACIÓN: {time.perf_counter() - time0}")
     
     # logger.info(f"PRobado sencillo")
-    if basic_test(text_test):
-        logger.debug(f"Test basco acabdo")
+    # if basic_test(text_test):
+    #     logger.debug(f"Test basco acabdo")
             # # Test detallado de estructura completa
         # detailed_result = wf.find_keywords(base_queries)
         # logger.debug(

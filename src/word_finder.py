@@ -29,7 +29,7 @@ class WordFinder:
         self.global_filter = model.get("global_filter", {})
         self.project_root = model.get("project_root", "")
         # Parametros de configuración
-        self.motor = MotorMatricesControl(self.project_root, params)        
+        self.motor = MotorMatricesControl(self.project_root, params)
         self.threshold: float = params.get("threshold_similarity", {})
         self.global_filter_threshold: float = params.get("global_filter_threshold", {})
         self.ngrams_range: Tuple[int, int] = params["char_ngrams"]
@@ -89,15 +89,15 @@ class WordFinder:
     def noise_words(self) -> FrozenSet[str]:
         return frozenset([w for w in self.noise_filter.keys()])
 
-    # def test_matrix(self):
-    #     for n in range(self.ngrams_range[0], (self.ngrams_range[1] + 1)):
-    #         for regis in self.motor.registro_matrices:
-    #             if (n+1) == regis:
-    #                 mapp_matrix = self.motor.registro_matrices[n+1]
-    #                 matriz_csr = sp.csr_matrix((mapp_matrix.data, mapp_matrix.indices, mapp_matrix.indptr), shape=tuple(mapp_matrix.shape))
-    #                 blokdf = pd.DataFrame(matriz_csr[0:100, 0:100].toarray())
-    #                 path = os.path.join(self.project_root, "sparce_inspect.csv")
-    #                 blokdf.to_csv(path, index=False, header=False)
+    def test_matrix(self):
+        for n in range(self.ngrams_range[0], (self.ngrams_range[1] + 1)):
+            for regis in self.motor.registro_matrices:
+                if (n+1) == regis:
+                    mapp_matrix = self.motor.registro_matrices[n+1]
+                    matriz_csr = sp.csr_matrix((mapp_matrix.data, mapp_matrix.indices, mapp_matrix.indptr), shape=tuple(mapp_matrix.shape))
+                    blokdf = pd.DataFrame(matriz_csr[0:100, 0:100].toarray())
+                    path = os.path.join(self.project_root, "sparce_inspect.csv")
+                    blokdf.to_csv(path, index=False, header=False)
 
     def find_keywords(self, text: List[str] | str) -> List[Dict[str, Any]]:
         try:

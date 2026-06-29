@@ -8,7 +8,7 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
 
-CONSOLE_LEVEL = "INFO"
+CONSOLE_LEVEL = "WARNING"
 FILE_LEVEL = "INFO"
 CONSOLE_FORMAT = "%(asctime)s - %(filename)s:%(lineno)d - %(message)s"
 FILE_FORMAT = "%(asctime)s - %(module)s:%(lineno)d - %(message)s"
@@ -42,12 +42,11 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(console_formatter)
 console_handler.setLevel(CONSOLE_LEVEL.upper())
 logger_root.addHandler(console_handler)
-    
+CONFIG_FILE = os.path.join(PROJECT_ROOT, "config", "config.yaml")
+KEY_WORDS = os.path.join(PROJECT_ROOT, "config", "key_words.json")
+clear_output_folders(["models"], PROJECT_ROOT)
+
 if __name__ == "__main__":
-    
-    CONFIG_FILE = os.path.join(PROJECT_ROOT, "config", "config.yaml")
-    KEY_WORDS = os.path.join(PROJECT_ROOT, "config", "key_words.json")
-    clear_output_folders(["models"], PROJECT_ROOT)
     try:
         config_file = CONFIG_FILE
         key_words_file = KEY_WORDS
